@@ -22,14 +22,21 @@ fun main() {
         println(fizzBuzz(i))
     }
 
-    println("\n\n===== ooo =====")
+    println("\n\n===== 2.4.3 =====")
+    val list = arrayListOf("10", "11", "1001")
+    for ((index, element) in list.withIndex()) {
+        println("$index : $element")
+    }
 
+    println("kotlin" in "java".."scala")
+    println("kotlin" in setOf("java", "scala"))
 
     println("\n\n===== ooo =====")
 
 
 }
 
+// ========================== 2.4.3 ==========================
 
 // ========================== 2.3.7 ==========================
 fun fizzBuzz(i: Int) = when {
