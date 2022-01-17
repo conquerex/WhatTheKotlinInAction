@@ -3,30 +3,59 @@ package ch2
 import ch2.Color.*
 
 fun main() {
-    println("\n\n===== ch2.3.1 =====")
+    println("\n\n===== 2.3.1 =====")
     println(Color.BLUE.rgb())
     println(Color.GREEN.rgb())
     println(Color.VIOLET.rgb())
 
-    println("\n\n===== ch2.3.3 =====")
+    println("\n\n===== 2.3.3 =====")
     println(mix(BLUE, YELLOW))
 
-    println("\n\n===== ch2.3.5 =====")
+    println("\n\n===== 2.3.5 =====")
     println(eval((Sum(Sum(Num(1), Num(4)), Num(5)))))
 
-    println("\n\n===== ch ooo =====")
+    println("\n\n===== 2.3.7 =====")
+    println(evalWithLogging((Sum(Sum(Num(1), Num(4)), Num(5)))))
+
+    println("\n\n===== 2.4.2 =====")
+    for (i in 1..20) { // 해당 범위의 정수에 대해 이터레이션한다
+        println(fizzBuzz(i))
+    }
+
+    println("\n\n===== ooo =====")
 
 
-    println("\n\n===== ch ooo =====")
-
-
-    println("\n\n===== ch ooo =====")
-
-
-    println("\n\n===== ch ooo =====")
+    println("\n\n===== ooo =====")
 
 
 }
+
+
+// ========================== 2.3.7 ==========================
+fun fizzBuzz(i: Int) = when {
+    i % 15 == 0 -> "FizzBuzz"
+    i % 3 == 0 -> "Fizz"
+    i % 5 == 0 -> "Buzz"
+    else -> "$i"
+}
+
+
+// ========================== 2.3.7 ==========================
+fun evalWithLogging(e: Expr): Int =
+    when (e) {
+        is Num -> {
+            println("num: ${e.value}")
+            e.value  // 이 식이 블록의 마지막 식. e의 타입이 Num이면 e.value 반환
+        }
+        is Sum -> {
+            val left = evalWithLogging(e.left)
+            val right = evalWithLogging(e.right)
+            println("sum: $left + $right")
+            left + right // e의 타입이 Sum이면 이 식의 값이 반환
+        }
+        else -> throw   IllegalArgumentException("Unknown expression")
+    }
+
 
 // ========================== 2.3.5 ==========================
 interface Expr
@@ -74,7 +103,7 @@ enum class Color(
 
     fun getMnemonic(color: Color) {
         when (color) {
-            Color.RED -> "Richard"
+            Color.RED -> "Riard"
             Color.ORANGE -> "Of"
             Color.YELLOW -> "York"
             Color.GREEN -> "Gave"
