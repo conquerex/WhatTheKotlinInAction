@@ -403,7 +403,122 @@ fun main(args: Array<Strgin>) {
 
 <br/>
 
+## 2.3 선택 표현과 처리: enum과 when
 
+when은 자바의 switch를 대치하되 훨씬 더 강력하며, 앞으로 더 자주 사용할 프로그래밍 요소이다. 
+when에 대해 설명하는 과정에서 코틀린에서 enum을 선언하는 방법과 스마트 캐스트에 대해서도 살펴본다.
+
+<br/>
+
+### 2.3.1 enum 클래스 정의
+
+```kotlin
+enum class Color { // 무지개색
+	RED, ORANGE, YELLOW, GREEN, BLUE, INDIGO, VIOLET
+}
+```
+
+코틀린에서는 enum class를 사용, 자바는 enum을 사용.
+코틀린에서 enum은 소프트 키워드(soft keyword)라 부르는 존재다. 
+enum은 class 앞에 있을 때는 특별한 의미를 지니지만 다른 곳에서는 이름에 사용할 수 있다. 
+반면 class는 키워드이다. 따라서 class라는 이름을 사용할 수 없으므로 
+클래스를 표현하는 변수 등을 정의할 때는 claaz나 aClass와 같은 이름을 사용해야 한다.
+
+자바와 마찬가지로 enum은 단순히 값만 열거하는 존재가 아니다. 
+enum 클래스 안에도 프로퍼티나 메소드를 정의할 수 있다.
+
+다음은 프로퍼티와 메소드를 enum 안에 선언하는 방법을 보여준다.
+
+```kotlin
+enum class Color (
+	val r: Int, val g: Int, val b: Int //상수의 프로퍼티 정의
+) {
+	//각 상수를 생성할 때 그에 대한 프로퍼티 값을 지정
+	RED(255, 0, 0), ORANGE(255, 165, 0),
+	YELLOW(255, 255, 0), GREEN(0, 255, 0), BLUE(0, 0, 255),
+	INDIGO(75, 0, 130), VIOLET(238, 130, 238); //세미콜론 반드시 사용
+
+	fun rgb() = (r * 256 + g) * 256 + b //enum 클래스 안에서 메소드를 정의
+}
+
+println(Color.BLUE.rgb())
+-> 255
+```
+
+enum에서도 일반적인 클래스와 마찬가지로 생성자와 프로퍼티를 선언한다. 
+각 enum 상수를 정의할 때는 그 상수에 해당하는 프로퍼티 값을 지정해야만 한다.
+
+이 예제에서는 코틀린에서 유일하게 세미콜론이 필수인 부분을 볼 수 있다. 
+enum 클래스 안에 메소드를 정의하는 경우 반드시 enum 상수 목록과 메소드 정의 사이에 세미콜론을 넣어야 한다.
+
+<br/>
+
+### 2.3.2 when으로 enum 클래스 다루기
+`Richard Of York Gave Battle In Vain!` (요크의 리처드가 경솔하게 싸움을 걸었지!)
+
+
+무지개의 각 색에 대해 그와 상응하는 연상 단어를 짝지어주는 함수가 필요하다고 생각해보자. 
+그리고 그 연상 단어 정보를 enum안에 저장하지는 않는다고 하자. 
+자바라면 switch문으로 그런 함수를 작성할 수 있다. 
+switch에 해당하는 코틀린 구성 요소는 `when`.
+
+if와 마찬가지로 when도 값을 만들어내는 `식`이기에, 식이 본문인 함수에 when을 바로 사용할 수 있다.
+
+```kotlin
+enum class Color (
+    val r: Int, val g: Int, val b: Int //상수의 프로퍼티 정의
+) {
+    //각 상수를 생성할 때 그에 대한 프로퍼티 값을 지정
+    RED(255, 0, 0), ORANGE(255, 165, 0),
+    YELLOW(255, 255, 0), GREEN(0, 255, 0), BLUE(0, 0, 255),
+    INDIGO(75, 0, 130), VIOLET(238, 130, 238); //세미콜론 반드시 사용
+
+    fun rgb() = (r * 256 + g) * 256 + b //enum 클래스 안에서 메소드를 정의
+
+    fun getMnemonic(color: Color) { // 함수의 반환 값으로 when 식을 직접 사용
+        when (color) { // 색이 특정 enum 상수와 같을 때 그 상수에 대응하는 문자열을 들려준다
+            Color.RED -> "Richard"
+            Color.ORANGE -> "Of"
+            Color.YELLOW -> "York"
+            Color.GREEN -> "Gave"
+            Color.BLUE -> "Battle"
+            Color.INDIGO -> "In"
+            Color.VIOLET -> "Vain"
+        }
+    }
+}
+```
+
+위 코드는 color로 전달된 값과 같은 분기를 찾는다. 
+자바와 달리 각 분기의 끝에 break를 넣지 않아도 된다. (필자 : 최고!!)
+성공적으로 매치되는 분기를 찾으면 switch는 그 분기를 실행한다. 
+한 분기 안에서 여러 값을 매치 패턴으로 사용할 수도 있는데, 이런 경우 값 사이를 콤마로 분리한다.
+
+```kotlin
+fun getWarmth(color: Color) = when (color) {
+        Color.RED, Color.ORANGE, Color.YELLOW -> "warm"
+        Color.GREEN -> "neutral"
+        Color.BLUE, Color.INDIGO, Color.VIOLET -> "cold"
+    }
+println(getWarmth(Color.ORANGE))
+```
+
+지금까지는 enum 클래스 이름을 enum 상수 이름 앞에 붙인 전체 이름을 사용.
+상수 값을 임포트하면 이 코드를 더 간단하게 만들 수 있다.
+
+```kotlin
+import ch02.colors.Color // 다른 패키지에서 정의한 Color 클래스를 임포트
+import ch02.colors.Color.* // 짧은 이름으로 사요하기 위해 enum 상수를 모두 임포트
+
+fun getWarmth(color: Color) = when (color) {
+        RED, ORANGE, YELLOW -> "warm" // 임포트한 enum 상수를 이름만으로 사용
+        GREEN -> "neutral"
+        BLUE, INDIGO, VIOLET -> "cold"
+    }
+println(getWarmth(Color.ORANGE))
+```
+
+<br/>
 
 <br>
 <br>
