@@ -44,9 +44,15 @@ fun main() {
 
 
     println("\n\n===== 3.3 =====")
-
+    println("Kotlin".lastChar())
 
 }
+
+// 본문 코드 : this.get(this.length - 1)
+fun String.lastChar(): Char = this[this.length - 1]
+
+fun String.lastChar2(): Char = get(length - 1)
+
 
 fun <T> joinToString2(
     collection: Collection<T>,
