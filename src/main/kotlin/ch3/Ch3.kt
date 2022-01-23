@@ -1,7 +1,5 @@
 package ch3
 
-import java.lang.StringBuilder
-
 fun main() {
     println("\n\n===== 3.1 =====")
     // 집합 (Set)
@@ -38,6 +36,31 @@ fun main() {
 
     val joinToString = joinToString(numberList, " or ", "<", ">")
     println(joinToString)
+
+    println("\n\n===== 3.2.2 =====")
+    println(joinToString2(numberList, ", ", "", ""))
+    println(joinToString2(numberList)) // separator, prefix, postfix 생략
+    println(joinToString2(numberList, "; ")) // separator를 "; "로 지정, prefix, postfix 생략
+
+
+    println("\n\n===== 3.3 =====")
+
+
+}
+
+fun <T> joinToString2(
+    collection: Collection<T>,
+    separator: String = ", ",   // 디폴트 값이 지정된 파라미터
+    prefix: String = "",
+    postfix: String = "",
+): String {
+    val result = StringBuilder(prefix)
+    for ((index, element) in collection.withIndex()) {
+        if (index > 0) result.append(separator) // 첫 원소 앞에는 구분자를 붙이면 안된다.
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
 }
 
 fun <T> joinToString(
@@ -45,7 +68,7 @@ fun <T> joinToString(
     separator: String,
     prefix: String,
     postfix: String
-) : String {
+): String {
     val result = StringBuilder(prefix)
     for ((index, element) in collection.withIndex()) {
         if (index > 0) result.append(separator) // 첫 원소 앞에는 구분자를 붙이면 안된다.
