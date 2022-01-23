@@ -1,5 +1,7 @@
 package ch3
 
+import java.lang.StringBuilder
+
 fun main() {
     println("\n\n===== 3.1 =====")
     // 집합 (Set)
@@ -30,6 +32,27 @@ fun main() {
 
     println("\n\n===== 3.2 =====")
 
+    val numberList = listOf(1, 2, 3, 5)
+
+    println(numberList)
+
+    val joinToString = joinToString(numberList, " or ", "<", ">")
+    println(joinToString)
+}
+
+fun <T> joinToString(
+    collection: Collection<T>,
+    separator: String,
+    prefix: String,
+    postfix: String
+) : String {
+    val result = StringBuilder(prefix)
+    for ((index, element) in collection.withIndex()) {
+        if (index > 0) result.append(separator) // 첫 원소 앞에는 구분자를 붙이면 안된다.
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
 }
 
 class Ch3 {

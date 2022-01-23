@@ -91,7 +91,79 @@ fun main() {
 
 <br/>
 
+## 3.2. 함수를 호출하기 쉽게 만들기
 
+자바 컬렉션에는 디폴트로 toString 구현이 들어있다. 출력 형식은 고정돼 있고 그래서 필요한 형식이 아닐 수 있다.
+함수 선언을 간단하게 만들 수 있도록 함수를 직접 구현한다. 그 후 코틀린답게 같은 함수를 구현한다.
+
+joinToString 함수 : 
+컬렉션의 원소를 StringBuilder의 뒤에 덧 붙인다. 이때 원소사이에 구분자를 추가, 
+StringBuilder의 맨 앞과 맨 뒤에는 접두사와 접미사를 추가한다.
+
+이 함수는 제네릭 하다. 즉 이 함수는 어떤 타입의 값을 원소로 하는 컬렉션이든 처리할 수 있다.
+하지만 선언 부분을 좀 더 고민해봐야 한다.
+함수를 호출할 때, 모든 인자를 전달하지 않고 기본 값을 제공하는 방법에 대해 살펴보자.
+
+```kotlin
+fun <T> joinToString(
+    collection: Collection<T>,
+    separator: String,
+    prefix: String,
+    postfix: String
+) : String {
+    val result = StringBuilder(prefix)
+    for ((index, element) in collection.withIndex()) {
+        if (index > 0) result.append(separator) // 첫 원소 앞에는 구분자를 붙이면 안된다.
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
+}
+
+// 테스트
+val numberList = listOf(1, 2, 3)
+println(numberList)
+
+val joinToString = joinToString(numberList, " or ", "<", ">")
+println(joinToString)
+```
+
+<br/>
+
+### 3.2.1 이름 붙인 인자
+
+첫번째 문제, 함수 호출 부분의 가독성.
+함수의 기본 값을 제공하는 방법을 살펴보기 전에, 함수 호출 부분의 가독성을 향상시켜보자.
+
+코딩 스타일 : 
+자바에서는 파라미터 이름을 주석에 넣으라고 요구하기도
+
+```java
+joinToString(collection, /* separator */ " ", /* prefix */ " ", /* postfix */ ".");
+```
+
+```kotlin
+joinToString(collection, separator = " ", prefix = " ", postfix = ".")
+```
+
+<br/>
+
+코틀린에서는 함수를 호출할 때, **인자에 이름을 명시할 수 있다.**
+
+```kotlin
+val joinToString = joinToString(numberList, "", "", "")
+```
+
+자바로 작성한 코드를 호출할 때는 이름 붙인 인자를 사용할 수 없다. 
+클래스 파일에 함수 파라미터 정보를 넣는 것은 자바 8 이후 추가된 선택적 특징.
+코틀린은 JDK 6와 호환된다. 그 결과 코틀린 컴파일러는 함수 시그니처의 파라미터 이름을 인식할 수 없고
+호출 시 사용한 친자 이름과 함수 정의의 파라미터 이름을 비교할 수 없다. (필자 : 이게 무슨 말??)
+
+<br/>
+
+
+
+<br/>
 
 
 <br/>
