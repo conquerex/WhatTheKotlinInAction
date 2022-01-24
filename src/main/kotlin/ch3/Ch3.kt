@@ -58,7 +58,22 @@ fun main() {
     view.click() // "view"에 저장된 값의 실제 타입에 따라 호출할 메서드가 결정된다.
     view.showOff() // 확장 함수는 정적으로 결정된다.
 
+    println("\n\n===== 3.4.1 =====")
+    println(list.last())
+    val numbers/*: Collection<Int>*/ = setOf(1, 14, 2)
+    println(numbers.maxOrNull())
+
 }
+
+//fun <T> List<T>.last(): T {
+//    /* 마지막 원소를 반환함 */
+//    return get(size - 1)
+//}
+//
+//fun Collection<Int>.max(): Int {
+//    /*컬렉션의 최댓값을 찾음 */
+//    return 0
+//}
 
 fun View.showOff() = println("I'm a view!")
 fun Button.showOff() = println("I'm a button")
@@ -67,7 +82,7 @@ open class View {
     open fun click() = println("View clicked")
 }
 
-class Button: View() { // Button은 View를 확장한다
+class Button : View() { // Button은 View를 확장한다
     override fun click() = println("Button clicked")
 }
 
