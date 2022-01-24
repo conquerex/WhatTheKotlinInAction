@@ -63,17 +63,39 @@ fun main() {
     val numbers/*: Collection<Int>*/ = setOf(1, 14, 2)
     println(numbers.maxOrNull())
 
+
+    println("\n\n===== 3.4.3 =====")
+    val (number, name) = 1 to "one"
+
+    println("\n\n===== 3.5.1 =====")
+    println("12.345-6.A".split("//.|-".toRegex())) // "-"로 나누기. 정규식을 명시적으로 만든다.
+    println("12.345-6.A".split(".", "-")) // 여러 구분 문자열을 지정한다.
+
+    println("\n\n===== 3.5.2 =====")
+    parsePath("/Users/yole/kotlin-book/chapter.adoc")
+    parsePath2("/Users/test/kotlin-book/ch3.adoc")
 }
 
-//fun <T> List<T>.last(): T {
-//    /* 마지막 원소를 반환함 */
-//    return get(size - 1)
-//}
-//
-//fun Collection<Int>.max(): Int {
-//    /*컬렉션의 최댓값을 찾음 */
-//    return 0
-//}
+// 첫 번째 구현 : String을 확장한 함수를 사용
+fun parsePath(path: String) {
+    val directory = path.substringBeforeLast("/")
+    val fullName = path.substringAfterLast("/")
+
+    val fileName = fullName.substringBeforeLast(".")
+    val extension = fullName.substringAfterLast(".")
+
+    println("Dir: $directory, name: $fileName, ext: $extension")
+}
+
+// 두 번째 구현 : 정규식을 사용
+fun parsePath2(path: String) {
+    val regex = """(.+)/(.+)\.(.+)""".toRegex()
+    val matchResult = regex.matchEntire(path)
+    if (matchResult != null) {
+        val (directory, filename, extension) = matchResult.destructured
+        println("Dir: $directory, name: $filename, ext: $extension")
+    }
+}
 
 fun View.showOff() = println("I'm a view!")
 fun Button.showOff() = println("I'm a button")
