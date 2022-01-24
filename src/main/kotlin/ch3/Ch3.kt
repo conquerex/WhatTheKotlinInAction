@@ -46,6 +46,50 @@ fun main() {
     println("\n\n===== 3.3 =====")
     println("Kotlin".lastChar())
 
+    println("\n\n===== 3.3.3 =====")
+    val list = listOf(11, 22, 33)
+    println(list.joinToString3(separator = "; ", prefix = "(", postfix = ")"))
+    println(list.joinToString3(" "))
+    println(listOf("one", "two", "eight").join(" "))
+
+
+    println("\n\n===== 3.3.4 =====")
+    val view: View = Button()
+    view.click() // "view"에 저장된 값의 실제 타입에 따라 호출할 메서드가 결정된다.
+    view.showOff() // 확장 함수는 정적으로 결정된다.
+
+}
+
+fun View.showOff() = println("I'm a view!")
+fun Button.showOff() = println("I'm a button")
+
+open class View {
+    open fun click() = println("View clicked")
+}
+
+class Button: View() { // Button은 View를 확장한다
+    override fun click() = println("Button clicked")
+}
+
+fun Collection<String>.join(
+    separator: String = ", ",
+    prefix: String = "",
+    postfix: String = ""
+) = joinToString(separator, prefix, postfix)
+
+fun <T> Collection<T>.joinToString3( // Collection<T>에 대한 확장 함수를 선언한다.
+    separator: String = ", ",
+    prefix: String = "",
+    postfix: String = ""
+): String {
+    val result = StringBuilder(prefix)
+
+    for ((index, element) in this.withIndex()) {
+        if (index > 0) result.append(separator)
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
 }
 
 // 본문 코드 : this.get(this.length - 1)
