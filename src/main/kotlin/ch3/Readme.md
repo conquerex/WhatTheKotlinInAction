@@ -822,8 +822,171 @@ fun parsePath(path: String) {
 
 parsePath 함수 구현에 대한 설명은 7.4절에서 더 자세히...
 
+<br/>
+
+### 3.5.3. 여러 줄 3중 따옴표 문자열
+
+3중 따옴표 문자열에는 줄 바꿈을 표현하는 아무 문자열이나 (이스케이프 없이) 그대로 들어간다.
 
 
+```kotlin
+// 아스키코드로 글자만 사용해 그린 그림 출력
+val kotlinLogo = """|  //
+                   .| //
+                   .|/ \"""
+                    
+println(kotlinLogo.trimMargin("."))
+```
+
+여러 줄 문자열을 코드에서 더 보기 좋게 표현하고 싶다면 들여쓰기를 하되 
+들여쓰기의 끝부분을 특별한 문자열로 표시하고, trimMargin을 사용해 그 문자열과 그 직전의 공백을 제거한다.
+(위 코드에서는 .을 사용해 들여쓰기 한 부분을 표시하고, 
+trimMargin(".") 메서드를 통해 .과 직전의 공백을 모두 제거했다.)
+
+- 경로를 일반 문자열로 표현한다면 `C:\\Users\\yole\\kotlin-book`
+- 3중 따옴표 문자열로 쓰면 `"""C:\Users\yole\kotlin-book"""`
+
+3중 따옴표 문자열 안에서는 이스케이프가 불가능하다.
+그러나 만약 문자열 템플릿의 시작을 의미하는 $를 3중 따옴표 문자열 안에 넣어야 한다면
+`val price = """${'$'}99.9"""` 처럼 문자열 템플릿 안에 '$' 문자를 넣어서 써야한다.
+
+3중 따옴표 문자열은 복잡하게 이스케이프를 쓰거나 외부 파일에서 텍스트를 불러올 필요가 없으므로 
+테스트 등에서 매우 유용한 기능이다.
+
+> 이제 확장 함수가 기존 라이브러리의 API를 확장하고 기존 라이브러리를 새로운 언어에 맞춰 사용할 수 있게 도와주는 
+> 강력한 방법임을 알았을 것이다. 이런 식으로 기존 라이브러리를 새 언어에서 활용하는 패턴을 
+> `라이브러리 알선(Pimp My Library)` 패턴이라 부른다. 
+> 실제로 코틀린 표준 라이브러리 중 상당 부분은 표준 자바 클래스의 확장으로 이뤄졌다. 
+> 젯브레인스가 만든 안코(Anko) 라이브러리(필자 : 더 이상 안씀)도 안드로이드 API를 코틀린에 맞춰 확장한 함수를 제공한다. 
+> 그 외에도 스프링과 같은 여러 주요 서드파디 라이브러리를 코틀린에 맞게 확장해주는 코틀린 커뮤니티가 만든 수많은 라이브러리를 찾아볼 수 있다.
+
+<br/>
+<br/>
+
+
+### 3.6. 코드 다듬기: 로컬 함수와 확장
+`반복하지 말라`(DRY, Don't Repeat Yourself)
+자바 코드를 작성할 때는 DRY 원칙을 피하기가 쉽지 않다.
+- 많은 경우 메소드 추출(Extract Method) 리팩토링을 적용해서 긴 메소드를 부분부분 나눠서 각 부분을 재활용할 수 있다.
+  - 하지만 그렇게 코드를 리팩토링하면 클래스 안에 작은 메소드가 많아지고 
+  - 각 메소드 사이의 관계를 파악하기 힘들어서 코드를 이해하기 더 어려워질 수도 있다.
+- 리팩토링을 진행해서 추출한 메소드를 별도의 내부 클래스(inner class)안에 넣으면
+  - 코드를 깔끔하게 조직할 수는 있지만,
+  - 불필요한 준비 코드가 늘어난다.
+
+코틀린에서는 함수에서 추출한 함수를 원 함수 내부에 중첩시킬 수 있다.
+문법적인 부가 비용을 들이지 않고도 깔끔하게 코드를 조직할 수 있다.
+
+```kotlin
+class User(val id: Int, val name: String, val address: String)
+
+fun saveUser(user: User) {
+  if (user.name.isEmpty()) {      // 필드 검증 중복
+    throw IllegalArgumentException(
+      "Can't save user ${user.id}: empty Name"
+    )
+  }
+  if (user.address.isEmpty()) {   // 필드 검증 중복
+    throw IllegalArgumentException(
+      "Can't save user ${user.id}: empty Address"
+    )
+  }
+  // user를 데이터베이스에 저장한다.
+}
+
+// 실행 에러 : 
+// Exception in thread "main" java.lang.IllegalArgumentException: Can't save user 1: empty Name
+saveUser(User(1, "", ""))
+```
+
+코드 중복은 많지 않지만 
+클래스가 사용자의 필드를 검증할 때 필요한 여러 경우를 하나씩 처리하는 메소드로 넘쳐나기를 바라지는 않을 것.
+검증 코드를 로컬 함수로 분리하면 중복을 없애는 동시에 코드 구조를 깔끔하게 유지할 수 있다.
+
+```kotlin
+fun saveUser2(user: User) {
+  fun validate(
+    user: User,    // 한 필드를 검증하는 로컬 함수 정의
+    value: String,
+    fieldName: String
+  ) {
+    if (value.isEmpty()) {
+      throw IllegalArgumentException(
+        "Can't save user ${user.id}: empty $fieldName"
+      )
+    }
+  }
+
+  // 로컬 함수를 호출해서 각 필드를 검증
+  validate(user, user.name, "Name")
+  validate(user, user.address, "Address")
+  // user을 데이터베이스에 저장한다.
+}
+```
+
+- 검증 로직 중복은 사라졌고
+- 필요하면 User의 다른 필드에 대한 검증도 쉽게 추가할 수 있다
+- 하지만 User 객체를 로컬 함수에게 하나씩 전달해야 한다는 점은 아쉽.
+
+로컬 함수는 자신이 속한 바깥 함수의 모든 파라미터와 변수를 사용할 수 있다.
+
+```kotlin
+fun saveUser3(user: User) {
+  fun validate(value: String, fieldName: String) { // 이제 saveUser 함수의 user 파라미터를 중복 사용하지 않는다.
+    if (value.isEmpty()) {
+      throw IllegalArgumentException(
+        "Can't save user ${user.id}: " + // 바깥 함수의 파라미터에 직접 접근 가능
+                "empty $fieldName"
+      )
+    }
+  }
+  validate(user.name, "Name")
+  validate(user.address, "Address")
+}
+```
+
+검증 로직 - User 클래스를 확장 함수로 만들수 있다.
+
+```kotlin
+fun User.validateBeforeSave() {
+  fun validate(value: String, fieldName: String) {
+    if (value.isEmpty()) {
+      throw IllegalArgumentException(
+        "Can't save user $id: empty $fieldName"
+      )    // User의 프로퍼티를 직접 사용할 수 있다.
+    }
+  }
+  validate(name, "Name")
+  validate(address, "Address")
+}
+
+fun saveUser4(user: User) {
+  user.validateBeforeSave()   // 확장 함수 호출
+}
+```
+
+이 경우 검증 로직은 User를 사용하는 다른 곳에서 쓰이지 않을 기능이기 때문에 
+User에 포함시키고 싶지는 않고 User를 간결하게 유지하려면 검증 로직을 확장 함수로 작성할 수 도 있다.
+
+한 객체만을 다루면서 객체의 비공개 데이터를 다룰 필요는 없는 함수는 확장 함수로 만들면 
+`객체.멤버`처럼 수신 객체를 지정하지 않고도 공개된 멤버 프로퍼티나 메서드에 접근할 수 있다.
+
+확장 함수를 로컬 함수로 정의할 수 있다. 하지만 중첩된 함수의 깊이가 깊어지면 코드 읽기가 어려워짐다.
+따라서 일반적으로는 한단계만 함수를 중첩시카라고 권장.
+
+<br/>
+<br/>
+
+## 3.7. 요약
+
+- 코틀린은 자체 컬렉션 클래스를 정의하지 않지만 자바 클래스를 확장해서 더 풍부한 API를 제공한다.
+- 함수 파라미터의 디폴트 값을 정의하면 오버로딩한 함수를 정의할 필요성이 줄어든다. 이름붙인 인자를 사용하면 함수의 인자가 많을 때 함수 호출의 가독성을 더 향상시킬 수 있다.
+- 코틀린 파일에서 클래스 멤버가 아닌 최상위 함수와 프로퍼티를 직접 선언할 수 있다. 이를 활용하면 코드 구조를 더 유연하게 만들 수 있다.
+- 확장 함수와 프로퍼티를 사용하면 외부 라이브러리에 정의된 클래스를 포함해 모든 클래스의 API를 그 클래스의 소스코드를 바꿀 필요 없이 확장할 수 있다. 확장 함수를 사용해도 실행 시점에 부가 비용이 들지 않는다.
+- 중위 호출을 통해 인자가 하나 밖에 없는 메소드나 확장 함수를 더 깔끔한 구문으로 호출할 수 있다.
+- 코틀린은 정규식과 일반 문자열을 처리할 때 유용한 다양한 문자열 처리 함수를 제공한다.
+- 자바 문자열로 표현하려면 수많은 이스케이프가 필요한 문자열의 경우 3중 따옴표 문자열을 사용하면 더 깔끔하게 표현할 수 있다.
+- 로컬 함수를 써서 코드를 더 깔끔하게 유지하면서 중복을 제거할 수 있다.
 
 <br/>
 <br/>

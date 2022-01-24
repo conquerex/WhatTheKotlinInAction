@@ -74,6 +74,85 @@ fun main() {
     println("\n\n===== 3.5.2 =====")
     parsePath("/Users/yole/kotlin-book/chapter.adoc")
     parsePath2("/Users/test/kotlin-book/ch3.adoc")
+
+    println("\n\n===== 3.5.3 =====")
+    val kotlinLogo = """|  //
+		               .| //
+                       .|/ \"""
+    println(kotlinLogo.trimMargin("."))
+
+    val price = """${'$'}99.9"""
+    println(price)
+
+    println("\n\n===== 3.6 =====")
+//    saveUser(User(1, "", ""))
+//    saveUser2(User(1, "", ""))
+//    saveUser3(User(1, "", ""))
+    saveUser4(User(1, "", ""))
+}
+
+class User(val id: Int, val name: String, val address: String)
+
+fun saveUser(user: User) {
+    if (user.name.isEmpty()) {      // 필드 검증 중복
+        throw IllegalArgumentException(
+            "Can't save user ${user.id}: empty Name"
+        )
+    }
+    if (user.address.isEmpty()) {   // 필드 검증 중복
+        throw IllegalArgumentException(
+            "Can't save user ${user.id}: empty Address"
+        )
+    }
+    // user를 데이터베이스에 저장한다.
+}
+
+fun saveUser2(user: User) {
+    fun validate(
+        user: User,    // 한 필드를 검증하는 로컬 함수 정의
+        value: String,
+        fieldName: String
+    ) {
+        if (value.isEmpty()) {
+            throw IllegalArgumentException(
+                "Can't save user ${user.id}: empty $fieldName"
+            )
+        }
+    }
+
+    // 로컬 함수를 호출해서 각 필드를 검증
+    validate(user, user.name, "Name")
+    validate(user, user.address, "Address")
+    // user을 데이터베이스에 저장한다.
+}
+
+fun saveUser3(user: User) {
+    fun validate(value: String, fieldName: String) { // 이제 saveUser 함수의 user 파라미터를 중복 사용하지 않는다.
+        if (value.isEmpty()) {
+            throw IllegalArgumentException(
+                "Can't save user ${user.id}: " + // 바깥 함수의 파라미터에 직접 접근 가능
+                        "empty $fieldName"
+            )
+        }
+    }
+    validate(user.name, "Name")
+    validate(user.address, "Address")
+}
+
+fun User.validateBeforeSave() {
+    fun validate(value: String, fieldName: String) {
+        if (value.isEmpty()) {
+            throw IllegalArgumentException(
+                "Can't save user $id: empty $fieldName"
+            )    // User의 프로퍼티를 직접 사용할 수 있다.
+        }
+    }
+    validate(name, "Name")
+    validate(address, "Address")
+}
+
+fun saveUser4(user: User) {
+    user.validateBeforeSave()   // 확장 함수 호출
 }
 
 // 첫 번째 구현 : String을 확장한 함수를 사용
