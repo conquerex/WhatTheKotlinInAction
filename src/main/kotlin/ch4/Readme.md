@@ -108,7 +108,7 @@ button.setFocus(true)
 button.click()
 ```
 
-> #### ✅자바에서 코틀린의 메소드가 있는 인터페이스 구현하기
+> ### ✅자바에서 코틀린의 메소드가 있는 인터페이스 구현하기
 > 코틀린은 자바 6와 호환되게 설계됐다. 따라서 인터페이스의 디폴트 메서드를 지원하지 않는다. 
 > 따라서 코틀린은 디폴트 메서드가 있는 인터페이스를 
 > 일반 인터페이스와 디폴트 메서드 구현이 정적 메서드로 들어있는 클래스를 조합해 구현한다. 
@@ -184,7 +184,7 @@ open class RichButton2 : Clickable {
 }
 ```
 
-> #### ✅열린 클래스와 스마트 캐스트
+> ### ✅열린 클래스와 스마트 캐스트
 > 클래스의 기본적인 상속 가능 상태를 `final`로 함으로써 얻을 수 있는 큰 이익은 
 > 다양한 경우에 `스마트 캐스트`가 가능하다는 점이다. 
 > 클래스 프로퍼티의 경우 이는 `val`이면서 커스텀 접근자가 없는 경우에만 스마트 캐스트를 쓸 수 있다는 것이다. 
@@ -217,12 +217,13 @@ abstract class Animated {
 인터페이스 멤버에게 본문이 없으면 자동으로 추상 멤버가 되지만, 
 그렇더라도 따로 멤버 선언 앞에 abstract 키워드를 덧붙일 필요가 없다.
 
-> #### 클래스 내에서 상속 제어 변경자의 의미
-> 
+> ### 🌼 클래스 내에서 상속 제어 변경자의 의미
+>
 > - _변경자_
 >   - _이 변경자가 붙은 멤버는..._
 >   - _설명_
-> 
+>
+> 위의 양식을 기준으로 아래와 같이 설명한다.
 > 
 > - final
 >   - 오버라이드할 수 없음
@@ -241,6 +242,318 @@ abstract class Animated {
 
 
 ## 4.1.3. 가시성 변경자: 기본적으로 공개
+
+**가시성 변경자**(visibility modifier)는 코드 기반에 있는 선언에 대한 클래스 외부 접근을 제어한다. 
+어떤 클래스의 구현에 대한 접근을 제한함으로써 그 클래스에 의존하는 외부 코드를 깨지 않고도 내부 구현을 변경할 수 있다.
+
+기본적으로 코틀린 가시성 변경자는 자바와 비슷하다. 
+자바와 같은 public, protected, private 변경자가 있다. 
+
+- 코틀린 : 아무 변경자도 없는 경우 선언은 모두 공개(public)된다.
+- 자바의 기본 가시성인 패키지 전용(package-private)은 코틀린에 없다. 
+  - 코틀린은 패키지를 네임스페이스(namespace)를 관리하기 위한 용도로만 사용한다. 
+  - 그래서 패키지를 가시성 제어에 사용하지 않는다.
+
+패키지 전용 가시성에 대한 대안으로 `internal`
+- 우리말로는 모듈 내부라고 번역 
+- "모듈 내부에서만 볼 수 있음"이라는 뜻이다. 
+- 모듈(module)은 한 번에 한꺼번에 컴파일되는 코틀린 파일들을 의미한다. 
+- IntelliJ, Eclipse, Maven, Gradle 등의 프로젝트가 모듈이 될 수 있고, 
+- 앤트 태스크(task)가 한 번 실행될 때 함께 컴파일되는 파일의 집합도 모듈이 될 수 있다.
+
+> Ant란 Java 기반의 자동화 빌드 툴. Another Neat Tool를 줄인 말. 
+> MAVEN이나 Gradle처럼 빌드 도구로 역할. 아파치 진영에서 만들어졌음.
+> 전부 대문자가 아닌 이유는 실제 개미(ant)의 특징을 강조하고 싶었던 것으로 추정됨.
+> (출처 : https://ant.apache.org/faq.html)
+
+모듈 내부 가시성은 우리의 모듈의 구현에 대해 진정한 **캡슐화**를 제공한다는 장점이 있다. 
+자바에서는 패키지가 같은 클래스를 선언하기만 하면 어떤 프로젝트의 외부에 있는 코드라도 
+패키지 내부에 있는 패키지 전용 선언에 쉽게 접근할 수 있다. 그래서 모듈의 캡슐화가 쉽게 깨진다.
+
+다른 차이는 코틀린에서는 최상위 선언에 대해 private 가시성(비공개 가시성)을 허용한다는 점이다. 
+그런 최상위 선언에는 클래스, 함수, 프로퍼티 등이 포함된다. 
+비공개 가시성인 최상위 선언은 그 선언이 들어있는 파일 내부에서만 사용할 수 있다. 
+이 또한 하위 시스템의 자세한 구현 사항을 외부에 감추고 싶을 때 유용한 방법이다. 
+아래의 표는 모든 가시성 변경자를 요약해 보여준다.
+
+> ### 🌼 코틀린의 가시성 변경자 
+> 
+> - _변경자_
+>  - _클래스 멤버_	
+>  - _최상위 선언_
+> 
+> 위의 양식을 기준으로 아래와 같이 설명한다.
+> 
+> - public (기본 가시성임)
+>   - 모든 곳에서 볼 수 있다.
+>   - 모든 곳에서 볼 수 있다.
+> - internal
+>   - 같은 모듈 안에서만 볼 수 있다.
+>   - 같은 모듈 안에서만 볼 수 있다.
+> - protected
+>   - 하위 클래스에서만 볼 수 있다.
+>   - (최상위 선언에 적용할 수 없음)
+> - private
+>   - 같은 클래스 안에서만 볼 수 있다.
+>   - 같은 파일 안에서만 볼 수 있다.
+
+(필자 : 자바는 최상위 선언은 오직 클래스뿐)
+
+<br/>
+
+giveSpeech 함수 안의 각 줄은 가시성 규칙을 위반한다.
+
+```kotlin
+internal open class TalkativeButton : Focusable {
+    private fun yell() = println("Hey!")
+    protected fun whisper() = println("Let's talk!")
+}
+
+// 오류: public 멤버가 자신의 internal 수신 타입인 TalkativeButton을 노출함.
+// 'public' member exposes its 'internal' receiver type TalkativeButton
+fun TalkativeButton.giveSpeech() {
+    // 오류: yell에 접근할 수 없음. yell은 TalktiveButton의 private 멤버임.
+    // Cannot access 'yell': it is private in 'TalkativeButton'
+    yell()
+
+    // 오류: whisper에 접근할 수 없음. whisper는 TalktiveButton의 protected 멤버임.
+    // Cannot access 'whisper': it is protected in 'TalkativeButton'
+    whisper()
+}
+```
+
+코틀린은 public 함수인 giveSpeech 안에서 
+그보다 가시성이 더 낮은(이 경우 internal) 타입인 TalkativeButton을 참조하지 못하게 한다. 
+
+- 이는 어떤 클래스의 기반 타입 목록에 들어있는 타입이나 제네릭 클래스의 타입 파라미터에 들어있는 타입의 가시성은 
+  - 그 클래스 자신의 가시성과 같거나 더 높아야 하고, 
+- 메서드의 시그니처에 사용된 모든 타입의 가시성은
+  - 그 메서드의 가시성과 같거나 더 높아야 한다는 더 일반적인 규칙에 해당한다.
+  
+이런 규칙은 어떤 함수를 호출하거나 어떤 클래스를 확장할 때 필요한 모든 타입에 접근할 수 있게 보장해준다.
+
+- 여기서 컴파일 오류를 없애려면 
+  - giveSpeech 확장 함수의 가시성을 internal로 바꾸거나, 
+  - TalkativeButton 클래스의 가시성을 public으로 바꿔야 한다.
+
+자바에서는 같은 패키지 안에서 `protected` 멤버에 접근할 수 있지만, 
+코틀린에서는 그렇지 않다는 점에서 자바와 코틀린의 protected가 다르다는 사실에 유의하자. 
+코틀린의 가시성 규칙은 단순하다. protected 멤버는 오직 어떤 클래스나 그 클래스를 상속한 클래스 안에서만 보인다. 
+클래스를 확장한 함수(확장 함수)는 그 클래스의 private이나 protected 멤버에 접근할 수 없다.
+
+> ### ✅코틀린의 가시성 변경자와 자바
+> 코틀린의 public, protected, private 변경자는 컴파일된 자바 바이트코드 안에서도 그대로 유지된다. 
+> 그렇게 컴파일된 코틀린 선언의 가시성은 마치 자바에서 똑같은 가시성을 사용해 선언한 경우와 같다.
+> 
+> 유일한 예외는 `private` 클래스다. 자바에서는 클래스를 private으로 만들 수 없으므로 
+> 내부적으로 코틀린은 private 클래스를 패키지-전용 클래스로 컴파일한다.
+>  
+> 자바에는 `internal`에 딱 맞는 가시성이 없다. 패키지-전용 가시성은 internal과는 전혀 다르다. 
+> 모듈은 보통 여러 패키지로 이뤄지며 서로 다른 모듈에 같은 패키지에 속한 선언이 들어 있을 수도 있다. 
+> 따라서 internal 변경자는 바이트코드상에서는 public이 된다.
+> 
+> 코틀린 선언과 그에 해당하는 자바 선언(또는 바이트코드 표현)에 이런 차이가 있기 때문에 
+> 코틀린에서는 접근할 수 없는 대상을 자바에서 접근할 수 있는 경우가 생긴다. 
+> 예를 들어 다른 모듈에 정의된 internal 클래스나 internal 최상위 선언을 모듈 외부의 자바 코드에서 접근할 수 있다. 
+> 또한 코틀린에서 protected로 정의한 멤버를 코틀린 클래스와 같은 패키지에 속한 자바 코드에서는 
+> 접근할 수 있다.(이는 자바에서 자바 protected 멤버에 접근하는 경우와 같다)
+> 
+> 하지만 코틀린 컴파일러가 internal 멤버의 이름을 보기 나쁘게 바꾼다는(mangle, 짓이기다, 심하게 훼손하다) 사실을 기억하라. 
+> 그로 인해 기술적으로는 internal 멤버를 자바에서 문제없이 사용할 수 있지만, 
+> 멤버 이름이 보기 불편하고 코드가 못생겨 보인다. 이렇게 이름을 바꾸는 이유는 두 가지다.
+> 
+> - 첫 번째는 한 모듈에 속한 어떤 클래스를 모듈 밖에서 상속한 경우, 
+>   그 하위 클래스 내부의 메서드 이름이 우연히 상위 클래스의 internal 메서드와 같아져서 
+>   내부 메서드를 오버라이드하는 경우를 방지하기 위함이고, 
+> - 두 번째는 실수로 internal 클래스를 모듈 외부에서 사용하는 일을 막기 위함이다.
+> 
+> (필자 : 자바와 코틀린, 둘 모두 사용하는 일을 피하면 되지 않을까?)
+
+코틀린과 자바 가시성 규칙의 또 다른 차이는 코틀린에서는 외부 클래스가 
+내부 클래스나 중첩 클래스의 private 멤버에 접근할 수 없다는 점이다. 
+다음 절에서 내부 클래스와 중첩된 클래스에 대해 설명하고 가시성과 관련된 예제도 살펴보자.
+
+
+<br/>
+
+
+## 4.1.4. 내부 클래스와 중첩된 클래스: 기본적으로 중첩 클래스
+
+자바처럼 코틀린에서도 클래스 안에 다른 클래스를 선언할 수 있다. 
+- 클래스 안에 다른 클래스를 선언하면 도우미 클래스를 캡슐화하거나 
+- 코드 정의를 그 코드를 사용하는 곳 가까이에 두고 싶을 때 유용하다. 
+- 자바와의 차이는 코틀린의 **중첩 클래스**(nested class)는 
+명시적으로 요청하지 않는 한 바깥쪽 클래스 인스턴스에 대한 접근 권한이 없다는 점이다.
+
+View의 상태를 직렬화. 
+뷰를 직렬화하는 일은 쉽지 않지만 필요한 모든 데이터를 다른 도우미 클래스로 복사할 수는 있다. 
+이를 위해 State 인터페이스를 선언하고 Serializable을 구현한다. 
+View 인터페이스 안에는 뷰의 상태를 가져와 저장할 때 사용할 getCurrentState와 restoreState 메서드 선언이 있다.
+
+
+```kotlin
+interface State : Serializable
+
+interface View {
+  fun getCurrentState(): State
+  fun restoreState(state: State) {}
+}
+```
+ 
+Button 클래스의 상태를 저장하는 클래스는 Button 클래스 내부에 선언하면 편리할 것.
+
+
+```java
+public class Button implements View {
+    @Override
+    public State getCurrentState() {
+        return new ButtonState();
+    }
+
+    @Override
+    public void restoreState(final State state) { /* ... */ }
+    
+    public class ButtonState implements State { /* ... */ }
+}
+```
+
+State 인터페이스를 구현한 ButtonState 클래스를 정의해서 Button에 대한 구체적인 정보를 저장한다. 
+getCurrentState 메서드 안에서는 ButtonState의 새 인스턴스를 만든다. 
+실제로는 getCurrentState 안에 필요한 모든 정보를 추가해야 한다.
+
+이 코드의 어디가 잘못된 걸까? 왜 선언한 버튼의 상태를 직렬화하면 
+java.io.NotSerializableException: Button이라는 오류가 발생할까? (필자 : 발생 안하는데?)  
+직렬화하려는 변수는 ButtonState 타입이 state 였는데 왜 Button을 직렬화할 수 없다는 예외가 발생할까?
+
+자바에서 다른 클래스 안에 정의한 클래스는 자동으로 내부 클래스(inner class)가 된다.
+이 예제의 ButtonState 클래스는 바깥쪽 Button 클래스에 대한 참조를 묵시적으로 포함한다. 
+그 참조로 인해 ButtonState를 직렬화할 수 없다.
+Button을 직렬화할 수 없으므로 버튼에 대한 참조가 ButtonState의 직렬화를 방해한다.
+
+이 문제를 해결하려면 ButtonState를 static 클래스로 선언해야 한다. 
+- 자바에서 중첩 클래스를 static으로 선언하면 그 클래스를 둘러싼 바깥쪽 클래스에 대한 묵시적인 참조가 사라진다. 
+- 코틀린에서 중첩된 클래스가 기본적으로 동작하는 방식은 방금 설명한 것과 정반대다.
+
+```kotlin
+class Button : View {
+    override fun getCurrentState(): State = ButtonState()
+
+    override fun restoreState(state: State) { /*...*/ }
+    
+    class ButtonState : State { /*...*/ }  // 이 클래스는 자바의 정적 중첩 클래스와 대응한다.
+}
+```
+
+코틀린 중첩 클래스에 아무런 변경자가 붙지 않으면 자바 static 중첩 클래스와 같다. 
+이를 내부 클래스로 변경해서 바깥쪽 클래스에 대한 참조를 포함하게 만들고 싶다면 inner 변경자를 붙여야 한다. 
+
+> ### 🌼 자바와 코틀린의 중첩 클래스와 내부 클래스 관계
+> - _클래스 B 안에 정의된 클래스 A_
+>   - _자바에서는_
+>   - _코틀린에서는_
+> 
+> 위의 양식을 기준으로 아래와 같이 설명한다.
+> 
+> - 중첩 클래스(바깥쪽 클래스에 대한 참조를 저장하지 않음) 
+>   - static class A 
+>   - class A 
+> - 내부 클래스(바깥쪽 클래스에 대한 참조를 저장함) 
+>   - class A 
+>   - inner class A
+
+내부 클래스 Inner 안에서 바깥쪽 클래스 Outer의 참조에 접근하려면 this@Outer라고 써야 한다.
+
+```kotlin
+class Outer {
+    inner class Inner {
+        fun getOuterReference(): Outer = this@Outer
+    }
+}
+```
+
+<br/>
+
+
+## 4.1.5. 봉인된 클래스: 클래스 계층 정의 시 계층 확장 제한
+
+상위 클래스인 Expr에는 숫자를 표현하는 Num과 덧셈 연산을 표현하는 Sum이라는 두 하위 클래스가 있다.
+
+```kotlin
+interface Expr
+
+class Num(val value: Int) : Expr
+class Sum(val left: Expr, val right: Expr) : Expr
+
+fun eval(e: Expr): Int =
+    when (e) {
+        is Num -> e.value
+        is Sum -> eval(e.right) + eval(e.left)
+        else -> throw IllegalArgumentException("Unknown expression")
+    }
+```
+
+코틀린 컴파일러는 when을 사용해 Expr 타입의 값을 검사할 때 꼭 디폴트 분기인 else 분기를 덧붙이게 강제한다. 
+이 예제의 else 분기에서는 반환할 만한 의미 있는 값이 없으므로 예외를 던진다.
+
+But...
+- 항상 디폴트 분기를 추가하는 게 편하지는 않다. 
+- 디폴트 분기가 있으면 이런 클래스 계층에 새로운 하위 클래스를 추가하더라도 
+  컴파일러가 when이 모든 경우를 처리하는지 제대로 검사할 수 없다. 
+- 혹 실수로 새로운 클래스 처리를 잊어버렸더라도 디폴트 분기가 선택되기 때문에 심각한 버그가 발생할 수 있다.
+
+코틀린은 이런 문제에 대한 해법을 제공한다. `sealed` 클래스가 그 답이다. 
+상위 클래스에 sealed 변경자를 붙이면 **그 상위 클래스를 상속한 하위 클래스 정의를 제한할 수** 있다. 
+sealed 클래스의 하위 클래스를 정의할 때는 반드시 상위 클래스 안에 중첩시켜야 한다.
+
+```kotlin
+sealed class Expr {
+  class Num(val value: Int) : Expr()
+  class Sum(val left: Expr, val right: Expr) : Expr()
+}
+
+fun eval(e: Expr): Int =
+  when (e) {
+    is Expr.Num -> e.value
+    is Expr.Sum -> eval(e.right) + eval(e.left)
+  }
+```
+
+when 식에서 sealed 클래스의 모든 하위 클래스를 처리한다면 디폴트 분기(else 분기)가 필요 없다. 
+sealed로 표시된 클래스는 자동으로 `open`임을 기억하라. 따라서 별도로 open 변경자를 붙일 필요가 없다. 
+(필자 : 책에 있는 그림 4.2 참고)
+
+sealed 클래스에 속한 값에 대해 디폴트 분기를 사용하지 않고 when 식을 사용하면 
+나중에 sealed 클래스의 상속 계층에 새로운 하위 클래스를 추가해도 when 식이 컴파일되지 않는다. 
+따라서 when 식을 고쳐야 한다는 사실을 쉽게 알 수 있다. 내부적으로 Expr 클래스는 private 생성자를 가진다. 
+그 생성자는 클래스 내부에서만 호출할 수 있다. sealed 인터페이스를 정의할 수는 없다. 
+왜냐하면 봉인된 인터페이스를 만들 수 있다면 
+그 인터페이스를 자바 쪽에서 구현하지 못하게 막을 수 있는 수단이 코틀린 컴파일러에게 없기 때문이다.
+
+> **코틀린 1.0에서 sealed는 너무 제약이 심하다.** 
+> 예를 들어 모든 하위 클래스는 중첩 클래스여야 하고, 데이터 클래스로 sealed 클래스를 상속할 수도 없다. 
+> 코틀린 1.1부터는 이 제한이 완화됐다. 
+> 봉인된 클래스와 같은 파일의 아무데서나 봉인된 클래스를 상속한 하위 클래스를 만들 수 있고, 
+> 데이터 클래스로 하위 클래스를 정의할 수도 있다.
+> (필자 : 이해 안감. 버전이 지났기에 그냥 넘어감)
+
+코틀린에서는 클래스를 확장할 때나 인터페이스를 구현할 때 모두 콜론(:)을 사용한다.
+
+```class Num(val value: Int) : Expr()```
+
+Expr()에 쓰인 괄호에 대해서는 코틀린의 클래스 초기화에 대해 다루는 다음 절에서 설명한다.
+
+<br/>
+
+
+## 4.2. 뻔하지 않은 생성자와 프로퍼티를 갖는 클래스 선언
+
+
+<br/>
+
+
+## 4.2.1 클래스 초기화: 주 생성자와 초기화 블록
+
+
 
 
 

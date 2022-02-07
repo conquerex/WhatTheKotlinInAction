@@ -1,5 +1,7 @@
 package ch4
 
+import java.io.Serializable
+
 fun main() {
     println("\n\n===== 4.1.1 =====")
     val button = Button()
@@ -7,12 +9,74 @@ fun main() {
     button.setFocus(true)
     button.click()
 
+    println("\n\n===== 4.1.4 =====")
+
+    val button2 = SampleButton()
+    button2.getCurrentState()
+
     println("\n\n===== 4. =====")
-    println("\n\n===== 4. =====")
+
+
     println("\n\n===== 4. =====")
     println("\n\n===== 4. =====")
 
 }
+
+// ===== 4.1.5 =====
+
+sealed class Expr {
+    class Num(val value: Int) : Expr()
+    class Sum(val left: Expr, val right: Expr) : Expr()
+//    class Num2(val value: Int) : Expr()
+}
+
+fun eval(e: Expr): Int =
+    when (e) {
+        is Expr.Num -> e.value
+        is Expr.Sum -> eval(e.right) + eval(e.left)
+    }
+
+
+// ===== 4.1.4 =====
+
+class Button414 : View {
+    override fun getCurrentState(): State = ButtonState()
+
+    override fun restoreState(state: State) {
+        //
+    }
+
+    class ButtonState : State { /*...*/ }  // 이 클래스는 자바의 정적 중첩 클래스와 대응한다.
+}
+
+interface State : Serializable
+
+interface View {
+    fun getCurrentState(): State
+    fun restoreState(state: State) {}
+}
+
+// ===== 4.1.3 =====
+
+internal open class TalkativeButton : Focusable {
+    private fun yell() = println("Hey!")
+    protected fun whisper() = println("Let's talk!")
+}
+
+/*
+// 오류: public 멤버가 자신의 internal 수신 타입인 TalkativeButton을 노출함.
+// 'public' member exposes its 'internal' receiver type TalkativeButton
+fun TalkativeButton.giveSpeech() {
+    // 오류: yell에 접근할 수 없음. yell은 TalktiveButton의 private 멤버임.
+    // Cannot access 'yell': it is private in 'TalkativeButton'
+    yell()
+
+    // 오류: whisper에 접근할 수 없음. whisper는 TalktiveButton의 protected 멤버임.
+    // Cannot access 'whisper': it is protected in 'TalkativeButton'
+    whisper()
+}
+*/
+
 
 // ===== 4.1.2 =====
 
