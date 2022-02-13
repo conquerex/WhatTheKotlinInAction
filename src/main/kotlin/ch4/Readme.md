@@ -1034,16 +1034,174 @@ class Client(val name: String, val postalCode: Int) {
 }
 ```
 
+<br/>
+
+
+## 4.3.2. 데이터 클래스: 모든 클래스가 정의해야 하는 메소드 자동 생성
+
+어떤 클래스가 데이터를 저장하는 역할만을 수행한다면 toStirng, equals, hashCode를 반드시 오버라이드해야 한다. 
+코틀린에서 data라는 변경자는 클래스 앞에 붙이면 필요한 메서드를 컴파일러가 자동으로 만들어준다. 
+data 변경자가 붙은 클래스를 데이터 클래스라고 부른다.
+
+```kotlin
+data class Client(val name: String, val postalCode: Int)
+```
+
+이제 Client 클래스는 자바에서 요구하는 모든 메서드를 포함한다.
+
+- 인스턴스 간 비교를 위한 equals
+- HashMap과 같은 해시 기반 컨테이너에서 키로 사용할 수 있는 hashCode
+- 클래스의 각 필드를 선언 순서대로 표시하는 문자열 표현을 만들어주는 toString
+
+equals와 hashCode는 주 생성자에 나열된 모든 프로퍼티를 고려해 만들어진다. 
+생성된 equals 메서드는 모든 프로퍼티 값의 동등성을 확인한다. 
+hashCode 메서드는 모든 프로퍼티의 해시 값을 바탕으로 계산한 해시 값을 반환한다. 
+이때 **주 생성자 밖에 정의된 프로퍼티는 equals나 hashCode를 계산할 때 고려의 대상이 아니라는 사실**에 유의하라.
+
+
+### 데이터 클래스와 불변성: copy() 메서드
+
+데이터 클래스의 프로퍼티가 꼭 val일 필요는 없다. 원한다면 var프로퍼티를 써도 된다. 
+하지만 데이터 클래스의 모든 프로퍼티를 읽기 전용으로 만들어서 
+데이터 클래스를 불변(immutable) 클래스로 만들라고 권장한다.
+HashMap 등의 컨테이너에 데이터 클래스 객체를 담는 경우엔 불변성이 필수적이다. 
+데이터 클래스 객체를 키로 하는 값을 컨테이너에 담은 다음에 키로 쓰인 데이터 객체의 프로퍼티를 변경하면 
+컨테이너 상태가 잘못될 수 있다. 
+
+게다가 불변 객체를 사용하면 프로그램에 대해 훨씬 쉽게 추론할 수 있다. 
+특히 다중스레드 프로그램의 경우 이런 성질은 더 중요하다. 
+불변 객체를 주로 사용하는 프로그램에서는 스레드가 사용 중인 데이터를 다른 스레드가 변경할 수 없으므로 
+스레드를 동기화해야 할 필요가 줄어든다.
+
+코틀린 컴파일러는 한 가지 편의 메서드를 제공한다. 
+그 메서드는 객체를 복사(copy)하면서 일부 프로퍼티를 바꿀 수 있게 해주는 copy 메서드다. 
+객체를 메모리상에서 직접 바꾸는 대신 복사본을 만드는 편이 더 낫다. 복사본은 원본과 다른 생명주기를 가지며, 
+복사를 하면서 일부 프로퍼티 값을 바꾸거나 복사본을 제거해도 
+프로그램에서 원본을 참조하는 다른 부분에 전혀 영향을 끼치지 않는다. 
+Client의 copy를 구현한다면 다음과 같을 것이다.
+
+```kotlin
+class Client(val name: String, val pastalCode: Int) {
+    ...
+    fun copy(name: String = this.name,
+             postalCode: Int = this.postalCody) =
+        Client(name, postalCode)
+}
+
+>>> val lee = Client("이계영", 4122)
+>>> println(lee.copy(postalCode = 4000))
+Client(name=이계영, postalCode=4000)
+```
 
 <br/>
 
 
-## 4.3.
+## 4.3.3. 클래스 위임: by 키워드 사용
+대규모 객체지향 시스템을 설계할 때 시스템을 취약하게 만드는 문제는 
+보통 구현 상속(implementation inheritance)에 의해 발생한다. 
+하위 클래스가 상위 클래스의 메서드 중 일부를 오버라이드하면 하위 클래스는 상위 클래스의 세부 구현 사항에 의존하게 된다. 
+시스템이 변함에 따라 상위 클래스의 구현이 바뀌거나 상위 클래스에 새로운 메서드가 추가된다. 
+그 과정에서 **하위 클래스가 상위 클래스에 대해 갖고 있던 가정이 깨져서 코드가 정상적으로 작동하지 못하는 경우**가 생길 수 있다.
 
-<br/>
+코틀린을 설계하면서 우리는 이런 문제를 인식하고 기본적으로 클래스를 `final`로 취급하기로 결정했다. 
+모든 클래스를 기본적으로 final로 취급하면 상속을 염두에 두고 `open` 변경자로 열어둔 클래스만 확장할 수 있다. 
+열린 상위 클래스의 소스코드를 변경할 때는 open 변경자를 보고 해당 클래스를 다른 클래스가 상속하리라 예상할 수 있으므로, 
+변경 시 하위 클래스를 깨지 않기 위해 좀 더 조심할 수 있다.
+
+하지만 종종 상속을 허용하지 않는 클래스에 새로운 동작을 추가해야 할 때가 있다. 
+이럴 때 사용하는 일반적인 방법이 **데코레이터 패턴**(Decorator)이다. 
+이 패턴의 핵심은 상속을 허용하지 않는 클래스(기존 클래스) 대신 사용할 수 있는 새로운 클래스(데코레이터)를 만들되 
+기존 클래스와 같은 인터페이스를 데코레이터가 제공하게 만들고, 
+기존 클래스를 데코레이터 내부에 필드로 유지하는 것이다. 
+이때 새로 정의해야 하는 기능은 데코레이터의 메서드에 새로 정의하고 
+기존 기능이 그대로 필요한 부분은 데코레이터의 메서드가 기존 클래스의 메서드에게 요청을 **전달**(forwarding)한다.
+
+이런 접근 방법의 단점은 **준비 코드가 상당히 많이 필요하다는 점**이다
+(필요한 준비 코드가 너무 많기 때문에 IntelliJ 아이디어 등의 IDE는 
+데코레이터의 준비 코드를 자동으로 생성해주는 기능을 제공한다). 
+예를 들어 Collection 같이 비교적 단순한 인터페이스를 구현하면서 아무 동작도 변경하지 않는 데코레이터를 만들 때조차도 
+다음과 같이 복잡한 코드를 작성해야 한다.
+
+```kotlin
+class DelegatingCollection<T> : Collection<T> {
+    private val innerList = arrayListOf<T>()
+    
+    override int size: Int get() = innerList.size
+    override fun isEmpty(): Boolean = innerList.isEmpty()
+    override fun contains(element: T): Boolean = innerList.contains(element)
+    override fun iterator(): Iterator<T> = innerList.iterator()
+    override fun containsAll(elements: Collection<T>): Boolean =
+        innerList.containsAll(elements)
+}
+```
+
+이런 위임을 언어가 제공하는 일급 시민 기능으로 지원한다는 점이 코틀린의 장점이다. 
+인터페이스를 구현할 때 `by` 키워드를 통해 그 인터페이스에 대한 구현을 다른 객체에 위임 중이라는 사실을 명시할 수 있다. 
+
+```kotlin
+class DelegatingCollection<T>(
+    innerList: Collection<T> = ArrayList<T>()
+) : Collection<T> by innerList {}
+```
+
+> 1급 객체의 특징
+> - 함수의 실제 파라미터가 될 수 있다. 
+> - 함수의 결과값으로 리턴될 수 있다. 
+> - 변수 할당문의 대상이 될 수 있다. 
+> - 등식(Equality)을 테스트할 수 있다.
+
+클래스 안에 있던 모든 메서드 정의가 없어졌다. 
+컴파일러가 그런 전달 메서드를 자동으로 생성하며 
+자동 생성한 코드의 구현은 DelegatingCollection에 있던 구현과 비슷하다. 
+그런 단순한 코드 중 관심을 가질 만한 부분은 거의 없기 때문에 
+컴파일러가 자동으로 해줄 수 있는 작업을 굳이 직접 해야 할 이유가 없다.
+
+메서드 중 일부의 동작을 변경하고 싶은 경우 메서드를 오버라이드하면 
+컴파일러가 생성한 메서드 대신 오버라이드한 메서드가 쓰인다. 
+기존 클래스의 메서드에 위임하는 기본 구현으로 충분한 메서드는 따로 오버라이드할 필요가 없다.
+
+이 기법을 이용해서 원소를 추가하려고 시도한 횟수를 기록하는 컬렉션을 구현해보자. 
+예를 들어 중복을 제거하는 프로세스를 설계하는 중이라면 
+원소 추가 횟수를 기록하는 컬렉션을 통해 최종 컬렉션 크기와 원소 추가 시도 횟수 사이의 비율을 살펴봄으로써 
+중복 제거 프로세스의 효율성을 판단할 수 있다.
+
+```kotlin
+class CountingSet<T>(
+    val innerSet: MutableCollection<T> = HashSet<T>()
+) : MutableCollection<T> by innerSet { // MutableCollection의 구현을 innerSet에게 위임한다.
+    var objectsAdded = 0
+
+    // 위임하지 않고 새로운 구현을 제공한다.
+    override fun add(element: T): Boolean {
+        objectsAdded++
+        return innerSet.add(element)
+    }
+
+    // 위임하지 않고 새로운 구현을 제공한다.
+    override fun addAll(c: Collection<T>): Boolean {
+        objectsAdded += c.size
+        return innerSet.addAll(c)
+    }
+}
+
+>>> val cset = CountingSet<Int>()
+>>> cset.addAll(listOf(1, 1, 2))
+>>> println("${cset.objectAdded} objects were added, ${cset.size} remain")
+3 objects were added, 2 remain // 중복이 제거 되었으므로 2개가 남음
+```
+
+예제를 보면 알 수 있지만 add와 addAll을 오버라이드해서 카운터를 증가시키고, 
+MutableCollection 인터페이스의 나머지 메서드는 내부 컨테이너(innerSet)에게 위임한다.
+
+이때 **CountingSet에 MutableCollection의 구현 방식에 대한 의존관계가 생기지 않는다는 점**이 중요하다. 
+예를 들어 내부 컨테이너가 addAll을 처리할 때 루프를 돌면서 add를 호출할 수도 있지만, 
+최적화를 위해 다른 방식을 택할 수도 있다. 
+
+클라이언트 코드가 CountingSet의 코드를 호출할 때 발생하는 일은 CountingSet 안에서 마음대로 제어할 수 있지만, 
+CountingSet 코드는 위임 대상 내부 클래스 MutableCollection이 문서화된 API를 변경하지 않는 한 
+CountingSet 코드가 계속 잘 작동할 것임을 확신할 수 있다.
 
 
-## 4.3.
 
 <br/>
 

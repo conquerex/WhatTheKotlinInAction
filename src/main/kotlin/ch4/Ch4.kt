@@ -23,6 +23,25 @@ fun main() {
 
 }
 
+// ===== 4.3.3 =====
+class CountingSet<T>(
+    val innerSet: MutableCollection<T> = HashSet<T>()
+) : MutableCollection<T> by innerSet { // MutableCollection의 구현을 innerSet에게 위임한다.
+    var objectsAdded = 0
+
+    // 위임하지 않고 새로운 구현을 제공한다.
+    override fun add(element: T): Boolean {
+        objectsAdded++
+        return innerSet.add(element)
+    }
+
+    // 위임하지 않고 새로운 구현을 제공한다.
+    override fun addAll(c: Collection<T>): Boolean {
+        objectsAdded += c.size
+        return innerSet.addAll(c)
+    }
+}
+
 // ===== 4.3.1 =====
 class Client(val name: String, val postalCode: Int) {
     // "Any"는 java.lang.Object에 대응하는 클래스로,
