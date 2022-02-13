@@ -23,6 +23,22 @@ fun main() {
 
 }
 
+// ===== 4.3.1 =====
+class Client(val name: String, val postalCode: Int) {
+    // "Any"는 java.lang.Object에 대응하는 클래스로,
+    // 코틀린의 모든 클래스의 최상위 클래스다.
+    // "Any?"는 널이 될 수 있는 타입이므로 "other"는 null일 수 있다.
+    override fun equals(other: Any?): Boolean {
+        // "other"가 Client인지 검사한다.
+        if (other == null || other !is Client)
+            return false
+        // 두 객체의 프로퍼티 값이 서로 같은지 검사한다.
+        return name == other.name && postalCode == other.postalCode
+    }
+
+    override fun toString() = "Client(name=$name, postalCode=$postalCode)"
+}
+
 // ===== 4.2.3 =====
 
 interface User2 {

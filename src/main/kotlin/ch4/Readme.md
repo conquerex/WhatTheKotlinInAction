@@ -813,11 +813,245 @@ interface User {
 
 ## 4.2.4. 게터와 세터에서 뒷받침하는 필드에 접근
 
+지금까지 프로퍼티의 두 가지 유형
+- 값을 저장하는 프로퍼티 
+- 커스텀 접근자에서 매번 값을 계산하는 프로퍼티
 
-## 4.
+값을 저장하는 동시에 로직을 실행할 수 있게 하기 위해서는 
+접근자 안에서 프로퍼티를 뒷받침하는 필드에 접근할 수 있어야 한다.
+
+프로퍼티에 저장된 값의 변경 이력을 로그에 남기려는 경우를 생각해보자. 
+그런 경우 변경 가능한 프로퍼티를 정의하되 세터에서 프로퍼티 값을 바꿀 때마다 약간의 코드를 추가로 실행해야 한다.
+
+```kotlin
+class User(val name: String) {
+    var address: String = "unspecified"
+        set(value: String) {
+            println("""
+                Address was changed for $name:
+                "$field" -> "$value".""".trimIndent())  // 뒷받침하는 필드 값 읽기
+            field = value   // 뒷받침하는 필드 값 변경하기
+        }
+}
+
+>>> val user = User("Alice")
+>>> user.address = "Elsenheimerstrasse 47, 80687 Muenchen"  // address의 세터 호출
+Address was changed for Alice:
+"unspecified" -> "Elsenheimerstrasse 47, 80687 Muenchen".
+```
+ 
+이 구문은 내부적으로 address의 세터를 호출한다. 
+이 예제에서는 커스텀 세터를 정의해서 추가 로직을 실행한다(여기서는 단순화를 위해 화면에 값의 변화를 출력하기만 한다).
+
+접근자의 본문에서는 field라는 특별한 식별자를 통해 `뒷받침하는 필드`에 접근할 수 있다. 
+게터에서는 field 값을 읽을 수만 있고, 세터에서는 field 값을 읽거나 쓸 수 있다.
+
+변경 가능 프로퍼티의 게터와 세터 중 한쪽만 직접 정의해도 된다는 점을 기억하라. 
+위의 코드에서 address의 게터는 필드 값을 그냥 반환해주는 뻔한 게터다. 
+따라서 게터를 굳이 직접 정의할 필요가 없다.
+
+뒷받침하는 필드가 있는 프로퍼티와 그런 필드가 없는 프로퍼티의 차이 
+- 클래스의 프로퍼티를 사용하는 쪽에서 프로퍼티를 읽는 방법이나 쓰는 방법은 뒷받침하는 필드의 유무와는 관계가 없다. 
+- 컴파일러는 디폴트 접근자 구현을 사용하건 직접 게터나 세터를 정의하건 관계없이 
+게터나 세터에 field를 사용하는 프로퍼티에 대해 뒷받침하는 필드를 생성해준다. 
+- 다만 field를 사용하지 않는 커스텀 접근자 구현을 정의한다면 
+뒷받침하는 필드는 존재하지 않는다(프로퍼티가 val인 경우에는 게터에 field가 없으면 되지만, 
+var인 경우에는 게터나 세터 모두에 field가 없어야 한다).
+
+```kotlin
+// 커스텀 접근자 예시
+val isSquare: Boolean
+    get() = height == width
+ 
+var counter: Int = 0
+    private set
+```
 
 
-## 4.
+<br/>
+
+
+## 4.2.5. 접근자의 가시성 변경
+
+접근자의 가시성은 기본적으로는 프로퍼티의 가시성과 같다. 
+하지만 원한다면 get이나 set 앞에 가시성 변경자를 추가해서 접근자의 가시성을 변경할 수 있다. 
+
+```kotlin
+class LengthCounter {
+  var counter: Int = 0
+    private set // 이 클래스 밖에서 이 프로퍼티의 값을 바꿀 수 없다.
+  fun addWord(word: String) {
+    counter += word.length
+  }
+}
+
+>>> val lengthCounter = LengthCounter()
+>>> lengthCounter.addWord("Hi!")
+>>> println(lengthCounter.counter)
+3
+```
+
+이 클래스는 자신에게 추가된 모든 단어의 길이를 합산한다. 
+전체 길이를 저장하는 프로퍼티는 클라이언트에게 제공하는 API의 일부분이므로 public으로 외부에 공개된다. 
+하지만 외부 코드에서 단어 길이의 합을 마음대로 바꾸지 못하게 이 클래스 내부에서만 길이를 변경하게 만들고 싶다. 
+그래서 기본 가시성을 가진 게터를 컴파일러가 생성하게 내버려 두는 대신 세터의 가시성을 private으로 지정한다.
+
+
+> ### ✅프로퍼티에 대해 나중에 다룰 내용
+> 이 책의 뒷부분에서 프로퍼티에 대해 다룰 내용을 참고할 수 있게 여기 미리 밝혀둔다. 
+> - `lateinit` 변경자를 널이 될 수 없는 프로퍼티에 지정하면 프로퍼티를 생성자가 호출된 다음에 초기화한다는 뜻이다. 
+> 일부 프레임워크에서는 이런 특성이 꼭 필요하다. 6장에서 이 내용을 다룬다. 
+> - 요청이 들어오면 비로소 초기화되는 `지연 초기화`(lazy initialized) 프로퍼티는 
+> 더 일반적인 위임 프로퍼티(delegated properly)의 일종이다. 
+> 위임 프로퍼티 및 지연 초기화 프로퍼티에 대해서는 7장에서 다룬다. 
+> - 자바 프레임워크와의 호환성을 위해 `자바의 특징을 코틀린에서 에뮬레이션하는 애노테이션`을 활용할 수 있다. 
+> 예를 들어 @JvmField 애너테이션을 프로퍼티에 붙이면 접근자가 없는 public 필드를 노출시켜준다. 
+> 애너테이션에 대해서는 10장에서 다룬다. `const` 변경자를 사용하면 애너테이션을 더 편리하게 다룰 수 있고 
+> 원시 타입이나 String 타입인 값을 애너테이션 인자로 활용할 수 있다. 이에 대해서는 10장에서 다룬다.
+
+
+<br/>
+
+## 4.3. 컴파일러가 생성한 메소드: 데이터 클래스와 클래스 위임
+
+자바 플랫폼에서는 클래스가 equals, hashCode, toString 등의 메서드를 구현해야한다. 
+하지만 자동으로 equals, hashCode, toString 등을 생성한다고 해도 코드베이스가 번잡해진다는 면은 동일하다. 
+
+코틀린 컴파일러는 한걸음 더 나가서 이런 메서드를 기계적으로 생성하는 작업을 보이지 않는 곳에서 해준다. 
+따라서 필수 메서드로 인한 잡음 없이 소스코드를 깔끔하게 유지할 수 있다.
+
+이제 코틀린 컴파일러가 데이터 클래스에 유용한 메서드를 자동으로 만들어주는 예와 
+클래스 위임 패턴을 아주 간단하게 쓸 수 있게 해주는 예를 살펴보자.
+
+## 4.3.1. 모든 클래스가 정의해야 하는 메서드
+자바와 마찬가지로 코틀린 클래스도 toString, equals, hashCode 등을 오버라이드할 수 있다. 
+코틀린은 이런 메서드 구현을 자동으로 생성해줄 수 있다. 
+
+```kotlin
+class Client(val name: String, val postalCode: Int)
+```
+
+### 문자열 표현: toString()
+자바처럼 코틀린의 모든 클래스도 인스턴스 문자열 표현을 얻을 방법을 제공한다. 
+기본 제공되는 객체의 문자열 표현은 Client@5e9f23b4 같은 방식인데, 
+이는 그다지 유용하지 않다. 이 기본 구현을 바꾸려면 toString 메서드를 오버라이드해야 한다.
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+    override fun toString() = "Client(name=$name, postalCode=$postalCode)"
+}
+
+>>> val client1 - Client("오현석", 4122)
+>>> println(client1)
+Client(name=오현석, postalCode=4122)
+```
+
+
+### 객체의 동등성: equals()
+Client 클래스를 사용하는 모든 계산은 클래스 밖에서 이뤄진다. 
+Client는 단지 데이터를 저장할 뿐이며, 그에 따라 구조도 단순하고 내부 정보를 투명하게 외부에 노출하게 설계됐다. 
+그렇지만 클래스는 단순할지라도 동작에 대한 몇 가지 요구 사항이 있을 수 있다. 
+예를 들어 서로 다른 두 객체가 내부에 동일한 데이터를 포함하는 경우 그 둘을 동등한 객체로 간주해야 할 수도 있다.
+
+```kotlin
+>>> val client1 = Client("오현석", 4122)
+>>> val client2 = Client("오현석", 4122)
+>>> println(client1 == client2) // 코틀린에서 == 연산자는 참조 동일성을 검사하지 않고 객체의 동등성을 검사한다. 따라서 == 연산은 equals를 호출하는 식으로 컴파일된다.
+false
+```
+
+
+> ### ✅동등성 연산에 ==를 사용함
+> 자바에서는 ==를 원시 타입과 참조 타입을 비교할 때 사용한다.
+원시 타입의 경우 ==는 두 피연산자의 값이 같은지 비교한다(동등성(equality)).
+반면 참조 타입의 경우 ==는 두 피연산자의 주소가 같은지를 비교한다(참조 비교(reference comparision)).
+따라서 자바에서는 두 객체의 동등성을 알려면 equals를 호출해야 한다.
+자바에서는 equals 대신 ==를 호출하면 문제가 될 수 있다는 사실도 아주 잘 알려져 있다.
+> 
+> 코틀린에서는 ==연산자가 두 객체를 비교하는 기본적인 방법이다.
+==는 내부적으로 equals를 호출해서 객체를 비교한다.
+따라서 **클래스가 equals를 오버라이드하면 ==를 통해 안전하게 그 클래스의 인스턴스를 비교**할 수 있다.
+**참조 비교를 위해서는 === 연산자를** 사용할 수 있다.
+=== 연산자는 자바에서 객체의 참조를 비교할 때 사용하는 == 연산자와 같다.
+
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+  // "Any"는 java.lang.Object에 대응하는 클래스로,
+  // 코틀린의 모든 클래스의 최상위 클래스다.
+  // "Any?"는 널이 될 수 있는 타입이므로 "other"는 null일 수 있다.
+  override fun equals(other: Any?): Boolean {
+    // "other"가 Client인지 검사한다.
+    if (other == null || other !is Client)
+      return false
+    // 두 객체의 프로퍼티 값이 서로 같은지 검사한다.
+    return name == other.name && postalCode == other.postalCode
+  }
+
+  override fun toString() = "Client(name=$name, postalCode=$postalCode)"
+}
+```
+
+다시 말하지만 코틀린의 is 검사는 자바의 instanceof와 같다. 
+is는 어떤 값의 타입을 검사한다. !is의 결과는 is 연산자의 결과를 부정한 값이다.
+
+코틀린에서는 override 변경자가 필수여서 실수로 override fun equals(other: Any?) 대신 
+override fun equals(other: Client)를 작성할 수는 없다. 
+그래서 equals를 오버라이드하고 나면 프로퍼티의 값이 모두 같은 두 고객 객체는 동등하리라 예상할 수 있다. 
+실제로 client1 == client2는 이제 true를 반환한다. 
+
+하지만 Client 클래스로 더 복잡한 작업을 수행해보면 제대로 작동하지 않는 경우가 있다. 
+이와 관련해 흔히 면접에서 질문하는 내용이 "Client"가 제대로 작동하지 않는 경우를 말하고 
+문제가 무엇인지 설명하시오"다. hashCode 정의를 빠뜨려서 그렇다고 답하는 개발자가 많을 것이다. 
+이 경우에는 실제 hashCode가 없다는 점이 원인이다.
+
+### 해시 컨테이너: hashCode()
+자바에서는 equals를 오버라이드할 때 반드시 hashCode도 함께 오버라이드해야 한다.
+아래 코드를 보면 프로퍼티가 모두 일치하므로 새 인스턴스와 집합에 있는 기존 인스턴스는 동등하다. 
+
+```kotlin
+val processed = hashSetOf(Client("오현석", 3123))
+println(processed.contains(Client("오현석", 3123)))
+>>> false
+```
+
+이는 Client 클래스가 hashCode 메서드를 정의하지 않았기 때문이다. 
+JVM 언어에서는 hashCode가 지켜야하는 "equals()가 true를 반환하는 두 객체는 
+반드시 같은 hashCode()를 반환해야 한다"라는 제약이 있는데, Client는 이를 어기고 있다.
+
+processed 집합은 HashSet이다. HashSet은 원소를 비교할 때 비용을 줄이기 위해 
+먼저 **객체의 해시 코드를 비교**하고 해시 코드가 같은 경우에만 실제 값을 비교한다. 
+방금 본 예제의 두 Client 인스턴스는 해시 코드가 다르기 때문에 두 번째 인스턴스가 집합 안에 들어있지 않다고 판단한다.
+해시 코드가 다를 때 equals가 반환하는 값은 판단 결과에 영향을 끼치지 못한다. 
+즉, 원소 객체들이 해시 코드에 대한 규칙을 지키지 않는 경우 HashSet은 제대로 작동할 수 없다.
+
+이 문제를 고치려면 Client가 hashCode를 구현해야 한다.
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+    ...
+    override fun hashCode(): Int = name.hashCode() * 31 + postalCode
+}
+```
+
+
+<br/>
+
+
+## 4.3.
+
+<br/>
+
+
+## 4.3.
+
+<br/>
+
+
+## 4.3.
+
+<br/>
+
 
 
 <br/>
