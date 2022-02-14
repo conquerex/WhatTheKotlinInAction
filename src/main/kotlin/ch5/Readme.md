@@ -93,7 +93,8 @@ Person(name=Bob, age=31)
 - maxBy : 가장 큰 원소를 찾기 위해 비교에 사용할 값을 돌려주는 함수
 - { it.age } : 바로 비교에 사용할 값을 돌려주는 함수 (it이 그 인자를 가리킨다.)
 
-이 예제에서는 컬렉션의 원소가 Person 객체였으므로 이 함수가 반환하는 값은 Person 객체의 age 필드에 저장된 나이 정보다.
+이 예제에서는 컬렉션의 원소가 Person 객체였으므로 이 함수가 반환하는 값은 
+Person 객체의 age 필드에 저장된 나이 정보다.
 
 ```kotlin
 people.maxBy(Person::age)
@@ -229,9 +230,9 @@ people.maxBy { it.age } // "it"은 자동 생성된 파라미터 이름이다.
 
 ```kotlin
 >>> val sum = { x: Int, y: Int ->
-println("Computing the sum of $x and $y...")
-x + y
-}
+        println("Computing the sum of $x and $y...")
+        x + y
+    }
 >>> println(sum(1,2))
 ```
 
@@ -242,7 +243,8 @@ x + y
 
 자바 메소드 안에서 무명 내부 클래스를 정의할 때 메소드의 로컬 변수를 무명 내부 클래스에서 사용할 수 있다.
 람다 안에서도 같은 일을 할 수 있다.
-람다를 함수 안에서 정의하면 함수의 파라미터뿐 아니라 람다 정의의 앞에 선언된 로컬 변수까지 람다에서 모두 사용할 수 있다.
+람다를 함수 안에서 정의하면 함수의 파라미터뿐 아니라 
+람다 정의의 앞에 선언된 로컬 변수까지 람다에서 모두 사용할 수 있다.
 
 ```kotlin
 fun printMessageWithPrefix(message: Collection<String>, prefix: String) {
@@ -280,7 +282,8 @@ fun printProblemCounts(responses: Collection<String>) {
 1 client errors, 1 server errors
 ```
 
-코틀린에서는 자바와 달리 람다에서 람다 밖 함수에 있는 파이널이 아닌 변수에 접근할 수 있고, 그 변수를 변경할 수도 있다.
+코틀린에서는 자바와 달리 람다에서 람다 밖 함수에 있는 파이널이 아닌 변수에 접근할 수 있고, 
+그 변수를 변경할 수도 있다.
 이 예제의 prefix, clientErrors, serverErrors와 같이 람다 안에서 사용하는 외부 변수를 
 **람다가 포획(capture)한 변수**라고 부른다.
 
@@ -296,7 +299,8 @@ fun printProblemCounts(responses: Collection<String>) {
 하지만 어떤 함수가 자신의 로컬 변수를 포획한 람다를 반환하거나 다른 변수에 저장한다면 
 로컬 변수의 생명주기와 함수의 생명주기가 달라질 수 있다.
 
-포획한 변수가 있는 람다를 저장해서 함수가 끝난 뒤에 실행해도 람다의 본문 코드는 여전히 포획한 변수를 읽거나 쓸 수 있다. 
+포획한 변수가 있는 람다를 저장해서 함수가 끝난 뒤에 실행해도 람다의 본문 코드는 
+여전히 포획한 변수를 읽거나 쓸 수 있다. 
 어떻게 그런 동작이 가능할까?
 파이널 변수를 포획한 경우에는 람다 코드를 변수 값과 함께 저장한다.
 파이널이 아닌 변수를 포획한 경우에는 변수를 특별한 래퍼로 감싸서 나중에 변경하거나 읽을 수 있게 한 다음, 
@@ -613,7 +617,7 @@ groupBy 함수가 그런 역할을 한다.
 ```kotlin
 >>> val list = listOf("a", "ab", "b")
 >>> println(list.groupBy(String::first))
-{a=[a, an], b=[b]}
+{a=[a, ab], b=[b]}
 ```
 
 first는 String의 멤버가 아니라 확장 함수지만 여전히 멤버 참조를 사용해 first에 접근할 수 있다.
