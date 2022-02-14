@@ -352,27 +352,463 @@ onClick 핸들러는 호출될 때마다 clicks의 값을 증가시키지만 그
 <br/>
 
 
-## 5.1.5. 
+## 5.1.5. 멤버 참조
+
+하지만 넘기려는 코드가 이미 함수로 선언된 경우는 어떻게 해야할까?
+물론 그 함수를 호출하는 람다를 만들면 된다.
+하지만 이는 중복이다. 함수를 직접 넘길 수는 없을까?
+
+코틀린에서는 자바 8과 마찬가지로 함수를 값으로 바꿀 수 있다. 이때 이중 콜론을 사용한다.
+
+```kotlin
+val getAge = Person::age
+```
+
+::를 사용하는 식을 **멤버 참조**라고 부른다.
+멤버 참조는 프로퍼티나 메소드를 단 하나만 호출하는 함수 값을 만들어준다.
+::는 클래스 이름과 여러분이 참조하려는 멤버(프로퍼티나 메소드) 이름 사이에 위치한다.
+
+```kotlin
+val getAge = { person: Person -> person.age }
+```
+
+참조 대상이 함수인지 프로퍼티인지와는 관계없이 멤버 참조 뒤에는 괄호를 넣으면 안된다.
+멤버 참조는 그 멤버를 호출하는 람다와 같은 타입이다. 따라서 다음 예처럼 그 둘을 자유롭게 바꿔 쓸 수 있다.
+
+```kotlin
+fun salute() = println("Salute!")
+>>> run(::salute)   // 최상위 함수를 참조한다.
+Salute!
+```
+
+클래스 이름을 생략하고 ::로 참조를 바로 시작한다.
+::salute라는 멤버 참조를 run 라이브러리 함수에 넘긴다(run은 인자로 받은 람다를 호출한다).
+람다가 인자가 여럿인 다른 함수한테 작업을 위임하는 경우 
+람다를 정의하지 않고 직접 위임 함수에 대한 참조를 제공하면 편리하다.
+
+```kotlin
+val action = { person: Person, message: String ->   // 이 람다는 sendEmail 함수에게 작업을 위임한다.
+    sendEmail(person, message)
+}
+val nextAction = ::sendEmail // 람다 대신 멤버 참조를 쓸 수 있다.
+```
+
+생성자 참조를 사용하면 클래스 생성 작업을 연기하거나 저장해둘 수 있다.
+:: 뒤에 클래스 이름을 넣으면 생성자 참조를 만들 수 있다.
+
+```kotlin
+data class Person(val name: String, val age: Int)
+
+>>> val createPerson = ::Person // "Person"의 인스턴스를 만드는 동작을 값으로 저장한다.
+>>> val p = createPerson("Alice", 29)
+>>> println(p)
+Person(name=Alice, age=29)
+```
+
+확장 함수도 멤버 함수와 똑같은 방식으로 참조할 수 있다는 점을 기억하라.
+
+```kotlin
+fun Person.isAdult() = age >= 21
+val predicate = Person::isAdult
+```
+
+isAdult는 Person클래스의 멤버가 아니고 **확장 함수**다.
+그렇지만 isAdult를 호출할 때 person.isAdult()로 인스턴스 멤버 호출 구문을 쓸 수 있는 것처럼 
+Person::isAdult로 멤버 참조 구문을 사용해 이 확장 함수에 대한 참조를 얻을 수 있다.
+
+> ### ✅바운드 멤버 참조
+> 코틀린 1.0에서는 클래스의 메소드나 프로퍼티에 대한 참조를 얻은 다음에 그 참조를 호출할 때 
+> 항상 인스턴스 객체를 제공해야 했다. 
+> 코틀린 1.1부터는 **바운드 멤버 참조**(bound member reference)를 지원한다. 
+> - 멤버 참조를 생성할 때 클래스 인스턴스를 함께 저장한 다음 나중에 그 인스턴스에 대해 멤버를 호출해준다. 
+> - 따라서 호출 시 수신 대상 객체를 별도로 지정해 줄 필요가 없다.
+> ```kotlin
+> >>> val p = Person("Dmitry", 34)
+> >>> val personsAgeFunction = Person::age
+> >>> println(personsAgeFunction(p))
+> 34
+> >>> val dmitrysAgeFunction = p::age    // 코틀린 1.1부터 사용할 수 있는 바운드 멤버 참조
+> >>> println(dmitrysAgeFunction())
+> 34
+> ```
+> 여기서 personsAgeFunction은 인자가 하나(인자로 받은 사람의 나이를 반환)이지만, 
+> dmitrysAgeFunction은 인자가 없는(참조를 만들 때 p가 가리키던 사람의 나이를 반환) 함수라는 점에 유의하라.
+> 
+> 코틀린 1.0에서는 p::age 대신에 { p.age } 라고 직접 객체의 프로퍼티를 돌려주는 람다를 만들어야만 한다.
+
 
 <br/>
 
 
-## 5.2.
+## 5.2. 컬렉션 함수 API
+
+함수형 프로그래밍 스타일을 사용하면 컬렉션을 다룰 때 편리하다.
+대부분의 작업에 라이브러리 함수를 활용할 수 있고 그로 인해 코드를 아주 간결하게 만들 수 있다.
 
 <br/>
 
 
-## 5.2.
+## 5.2.1. 필수적인 함수: filter와 map
+
+filter와 map은 컬렉션을 활용할 때 기반이 되는 함수다.
+대부분의 컬렉션 연산을 이 두 함수를 통해 표현할 수 있다.
+
+```kotlin
+data class Person(val name: String, val age: Int)
+```
+
+`filter` 함수는 컬렉션을 이터레이션하면서 주어진 람다에 각 원소를 넘겨서 람다가 true를 반환하는 원소만 모은다.
+
+```kotlin
+>>> val list = listOf(1, 2, 3, 4)
+>>> println(list.filter{ it % 2 == 0 })
+[2, 4]
+```
+
+```kotlin
+>>> val people = listOf(Person("Alice", 29), Person("Bob", 31))
+>>> println(people.filter { it.age > 30 })
+[Person(name=Bob, age=31)]
+```
+
+filter 함수는 컬렉션에서 원치 않는 원소를 제거한다.
+하지만 filter는 원소를 변환할 수 는 없다. 원소를 변환하려면 map 함수를 사용해야 한다.
+`map` 함수는 주어진 람다를 컬렉션의 각 원소에 적용한 결과를 모아서 새 컬렉션을 만든다.
+
+```kotlin
+>>> val list = listOf(1, 2, 3, 4)
+>>> println(list.map { it * it })
+[1, 4, 9, 16]
+```
+
+사람의 리스트가 아니라 이름의 리스트를 출력하고 싶다면 map으로 사람의 리스트를 이름의 리스트로 변환하면 된다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 29), Person("Bob", 31))
+>>> println(people.map { it.name })
+[Alice, Bob]
+```
+```kotlin
+people.map(Person::name) // 멤버 참조를 사용해보자.
+```
+```kotlin
+// 30살 이상인 사람의 이름 출력
+>>> people.filter { it.age > 30 }.map(Person::name)
+[Bob]
+```
+```kotlin
+// 가장 나이 많은 사람의 이름 출력
+people.filter { it.age == people.maxBy(Person::age)!!.age }
+```
+
+하지만 위 코드는 목록에서 최댓값을 구하는 작업을 계속 반복한다는 단점이 있다.
+아래는 이를 좀 더 개선해 한번만 계산하게 만든 코드다.
+
+```kotlin
+val maxAge = people.maxBy(Person::age)!!.age
+people.filter { it.age == maxAge }
+```
+
+필터와 변환 함수를 맵에 적용할 수도 있다.
+
+```kotlin
+>>> val numbers = mapOf(0 to "zero", 1 to "one")
+>>> println(numbers.mapValues { it.value.toUpperCase() })
+{0=ZERO, 1=ONE}
+```
 
 <br/>
 
 
-## 5.2.
+## 5.2.2. all, any, count, find: 컬렉션에서 술어 적용
+
+컬렉션에 대해 자주 수행하는 연산으로 컬렉션의 모든 원소가 **어떤 조건을 만족하는지 판단**하는
+(또는 그 변종으로 컬렉션 안에 어떤 조건을 만족하는 원소가 있는지 판단하는) 연산이 있다.
+코틀린에서는 all과 any가 이런 연산이다.
+`count` 함수는 조건을 만족하는 원소의 개수를 반환하며, `find` 함수는 조건을 만족하는 첫 번째 원소를 반환한다.
+
+```kotlin
+// 어떤 사람의 나이가 27살 이하인지 판단
+val canBeInClub27 = { p: Person -> p.age <= 27 }
+```
+
+모든 원소가 이 술어를 만족하는지 궁금하다면 `all` 함수를 쓴다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.all(canBeInClub27))
+false
+```
+
+술어를 만족하는 원소가 하나라도 있는지 궁금하면 `any`를 쓴다.
+
+```kotlin
+>>> println(people.any(canBeInClub27))
+true
+```
+
+어떤 조건에 대해 !all을 수행한 결과와 그 조건의 부정에 대해 any를 수행한 결과는 같다(드모르간의 법칙).
+또 어떤 조건에 대해 !any를 수행한 결과와 그 조건의 부정에 대해 all을 수행한 결과도 같다.
+가독성을 높이려면 !를 붙이지 않는 편이 낫다.
+
+```kotlin
+>>> val list = listOf(1, 2, 3)
+>>> println(!list.all { it == 3 })
+true
+>>> println(list.any { it != 3 } )
+true
+```
+
+술어를 만족하는 원소의 개수를 구하려면 count를 사용한다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.count(canBeInClub27))
+1
+```
+
+> ### ✅함수를 적재적소에 사용하라: count와 size
+> count가 있다는 사실을 잊어버리고, 컬렉션을 필터링한 결과의 크기를 가져오는 경우가 있다.
+> ```kotlin
+> >>> println(people.filter(canBeInClub27).size)
+> 1 
+> ```
+> 하지만 이렇게 처리하면 조건을 만족하는 모든 원소가 들어가는 중간 컬렉션이 생긴다. 
+> 반면 **count는 조건을 만족하는 원소의 개수만을 추적하지 조건을 만족하는 원소를 따로 저장하지 않는다.** 
+> 따라서 count가 훨씬 더 효율적이다.
+
+술어를 만족하는 원소를 하나 찾고 싶으면 find 함수를 사용한다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.find(canBeInClub27))
+Person(name=Alice, age=27)
+```
+
+이 식은 조건을 만족하는 원소가 하나라도 있는 경우 가장 먼저 조건을 만족한다고 확인된 원소를 반환하며, 
+만족하는 원소가 전혀 없는 경우 null을 반환한다.
+find는 `firstOfNull`과 같다.
+조건을 만족하는 원소가 없으면 null이 나온다는 사실을 더 명확히 하고 싶다면 `firstOrNull`을 쓸 수 있다.
+
+<br/>
+
+
+## 5.2.3. groupBy: 리스트를 여러 그룹으로 이뤄진 맵으로 변경
+컬렉션의 모든 원소를 어떤 특성에 따라 여러 그룹으로 나누고 싶다고 하자.
+특성을 파라미터로 전달하면 컬렉션을 자동으로 구분해주는 함수가 있으면 편리할 것이다.
+groupBy 함수가 그런 역할을 한다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 31), Person("Bob", 29), Person("Carol", 31))
+>>> println(people.groupBy { it.age })
+
+{29=[Person(name=Bob, age=29)],
+    31=[Person(name=Alice, age=31), Person(name=Carol, age=31)]}
+```
+
+이 연산의 결과는 컬렉션의 원소를 구분하는 특성(age)이고, 
+키 값에 따른 각 그룹(Person 객체의 모임)이 모인 값인 맵이다.
+각 그룹은 리스트다. 따라서 groupBy의 결과 타입은 Map<Int, List>이다.
+
+```kotlin
+>>> val list = listOf("a", "ab", "b")
+>>> println(list.groupBy(String::first))
+{a=[a, an], b=[b]}
+```
+
+first는 String의 멤버가 아니라 확장 함수지만 여전히 멤버 참조를 사용해 first에 접근할 수 있다.
+
+<br/>
+
+
+## 5.2.4. flatMap과 flatten: 중첩된 컬렉션 안의 원소 처리
+
+Book으로 표현한 책에 대한 정보를 저장하는 도서관이 있다고 가정하자.
+
+```kotlin
+class Book(val title: String, val authors: List<String>)
+```
+
+책마다 저자가 한 명 또는 여러 명 있다.
+도서관에 있는 책의 저자를 모두 모은 집합을 다음과 같이 가져올 수 있다.
+
+```kotlin
+books.flatMap { it.authors }.toSet()    // books 컬렉션에 있는 책을 쓴 모든 저자의 집합
+```
+
+`flatMap` 함수는 먼저 인자로 주어진 람다를 컬렉션의 모든 객체에 적용하고(또는 매핑하기) 
+람다를 적용한 결과 얻어지는 여러 리스트를 한 리스트로 한데 모은다(또는 펼치기(flatten)).
+
+```kotlin
+>>> val strings = listOf("abc", "def")
+>>> println(strings.flatMap { it.toList() })
+[a, b, c, d, e, f]
+```
+
+`toList` 함수를 문자열에 적용하면 그 문자열에 속한 모든 문자로 이뤄진 리스트가 만들어진다.
+map과 toList를 함께 사용하면 그림의 가운데 줄에 표현한 것처럼 문자로 이뤄진 리스트로 이뤄진 리스트가 생긴다.
+flatMap 함수는 다음 단계로 리스트의 리스트에 들어있던 모든 원소로 이뤄진 단일 리스트를 반환한다.
+
+```kotlin
+>>> val books = listOf(Book("Thursday Next", listOf("Jasper Fforde")),
+...                    Book("Mort", listOf("Terry Pratchett")),
+...                    Book("Good Omens", listOf("Terry Pratchett",
+...                                              "Neil Gaiman")))
+>>> println(books.flatMap { it.authors }.toSet())
+[Jasper Fforde, Terry Pratchett, Neil Gaiman]
+```
+
+toSet은 flatMap의 결과 리스트에서 중복을 없애고 집합으로 만든다.
+
+
+<br/>
+
+
+## 5.3. 지연 계산(lazy) 컬렉션 연산
+
+앞 절에서는 map이나 filter 같은 몇 가지 컬렉션 함수를 살펴봤다.
+그런 함수는 결과 컬렉션을 즉시 생성한다.
+이는 컬렉션 함수를 연쇄하면 매 단계마다 계산 중간 결과를 새로운 컬렉션에 임시로 담는다는 말이다.
+<span style="color:orange">시퀀스</span>를 사용하면 
+중간 임시 컬렉션을 사용하지 않고도 컬렉션 연산을 연쇄할 수 있다.
+
+```kotlin
+people.map(Person::name).filter {it.startsWith("A") }
+```
+
+코틀린 표준 라이브러리 참조 문서에는 filter와 map이 리스트를 반환한다고 써있다.
+이는 이 연쇄 호출이 리스트를 2개 만든다는 뜻이다.
+한 리스트는 filter의 결과를 담고, 다른 하나는 map의 결과를 담는다.
+원본 리스트에 원소가 2개밖에 없다면 리스트가 2개 더 생겨도 큰 문제가 되지 않겠지만, 
+**원소가 수백만 개가 되면 훨씬 더 효율이 떨어진다.**
+이를 더 효율적으로 만들기 위해서는 각 연산이 컬렉션을 직접 사용하는 대신 시퀀스를 사용하게 만들어야 한다.
+
+```kotlin
+people.asSequence() // 원본 컬렉션을 시퀀스로 변환한다.
+.map(Person::name) // 시퀀스도 컬렉션과 똑같은 API를 제공한다.
+.filter{ it.startsWith("A") }
+.toList() // 결과 시퀀스를 다시 리스트로 변환한다.
+```
+
+코틀린 지연 계산 시퀀스는 **Sequence 인터페이스**에서 시작한다.
+이 인터페이스는 단지 한 번에 하나씩 열거될 수 있는 원소의 시퀀스를 표현할 뿐이다.
+Sequence 안에는 `iterator`라는 단 하나의 메소드가 있다.
+그 메소드를 통해 시퀀스로부터 원소 값을 얻을 수 있다.
+
+Sequence 인터페이스의 강점은 그 인터페이스 위에 구현된 연산이 계산을 수행하는 방법 때문에 생긴다.
+**시퀀스의 원소는 필요할 때 비로소 계산된다.**
+따라서 중간 처리 결과를 저장하지 않고도 연산을 연쇄적으로 적용해서 효율적으로 계산을 수행할 수 있다.
+
+`asSequence` 확장 함수를 호출하면 어떤 컬렉션이든 시퀀스로 바꿀 수 있다.
+시퀀스를 리스트로 만들 때는 toList를 사용한다.
+
+왜 시퀀스를 다시 컬렉션으로 되돌려야 할까?
+시퀀스의 원소를 차례로 이터레이션해야 한다면 시퀀스를 직접 써도 된다.
+하지만 시퀀스의 원소를 인덱스를 사용해 접근하는 등의 다른 API 메소드가 필요하다면 시퀀스를 리스트로 변환해야 한다.
+
+> **큰 컬렉션에 대해서 연산을 연쇄시킬 때는 시퀀스를 적용하는 것을 규칙으로 삼아라.** 
+> 8.2절에서는 중간 컬렉션을 생성함에도 불구하고 
+> 코틀린에서 즉시 계산 컬렉션에 대한 연산이 더 효율적인 이유를 나중에 설명한다. 
+> 하지만 컬렉션에 들어있는 원소가 많으면 중간 원소를 재배열하는 비용이 커지기 때문에 지연 계산이 더 낫다.
+
+시퀀스에 대한 연산을 지연 계산하기 때문에 정말 계산을 실행하게 만들려면 
+최종 시퀀스의 원소를 하나씩 이터레이션하거나 최종 시퀀스를 리스트로 변환해야 한다.
+
+<br/>
+
+
+## 5.3.1. 시퀀스 연산 실행: 중간 연산과 최종 연산
+
+시퀀스에 대한 연산은 **중간 연산**과 **최종 연산**으로 나뉜다.
+- 중간 연산은 다른 시퀀스를 반환, 그 시퀀스는 최초 시퀀스의 원소를 변환하는 방법을 안다.
+- 최종 연산은 결과를 반환한다.
+
+결과는 최초 컬렉션에 대해 변환을 적용한 시퀀스로부터 일련의 계산을 수행해 얻을 수 있는 컬렉션이나 원소, 숫자 또는 객체다.
+
+중간 연산은 항상 지연 계산된다.
+
+```kotlin
+>>> listOf(1, 2, 3, 4).asSequence()
+...             .map { print("map($it) "); it * it }
+...             .filter { print("filter($it) "); it % 2 == 0 }
+```
+
+이 코드를 실행하면 아무 내용도 출력되지 않는다.
+이는 map과 filter 변환이 늦춰져서 결과를 얻을 필요가 있을 때(즉 최종 연산이 호출될 때) 적용된다는 뜻이다.
+
+```kotlin
+>>> listOf(1, 2, 3, 4).asSequence()
+...             .map { print("map($it) "); it * it }
+...             .filter { print("filter($it) "); it % 2 == 0 }
+...             .toList()
+max(1) filter(1) map(2) filter(4) map(3) filter(9) map(4) filter(16)
+```
+
+최종 연산을 수행하면 연기됐던 모든 계산이 수행된다.
+
+시퀀스의 경우 모든 연산은 각 원소에 대해 순차적으로 적용된다.
+즉 첫 번째 원소가 (반환된 다음에 걸러지면서) 처리되고, 다시 두 번째 원소가 처리되며, 
+이런 처리가 모든 원소에 대해 적용한다.
+
+따라서 원소에 연산을 차례대로 적용하다가 결과가 얻어지면 그 이후의 원소에 대해서는 변환이 이뤄지지 않을 수도 있다.
+map으로 리스트의 각 숫자를 제곱하고 제곱한 숫자 중에서 find로 3보다 큰 첫 번째 원소를 찾아보자.
+
+```kotlin
+>>> println(listOf(1, 2, 3, 4).asSequence()
+.map { it * it }.find { it > 3 })
+4
+```
+
+같은 연산을 시퀀스가 아니라 컬렉션에 수행하면 map의 결과가 먼저 평가돼 최초 컬렉션의 모든 원소가 변환된다.
+두 번째 단계에서는 map을 적용해서 얻은 중간 컬렉션으로부터 술어를 만족하는 원소를 찾는다.
+시퀀스를 사용하면 지연 계산으로 인해 원소 중 일부의 계산은 이뤄지지 않는다.
+
+- 즉시 계산(컬렉션)은 전체 컬렉션에 연산을 적용하지만, 
+- 지연 계산(시퀀스)은 원소를 한번에 하나씩 처리한다.
+
+컬렉션을 사용하면 리스트가 다른 리스트로 변환된다.
+시퀀스를 사용하면 find 호출이 원소를 하나씩 처리하기 시작한다.
+최초 시퀀스로부터 수를 하나 가져와서 map에 지정된 변환을 수행한 다음에 find에 지정된 술어를 만족하는지 검사한다.
+최초 시퀀스에서 2를 가져오면 제곱 값(4)이 3보다 커지기 때문에 그 제곱 값을 결과로 반환한다.
+
+컬렉션에 대해 수행하는 연산의 순서도 성능에 영향을 끼친다.
+사람의 컬렉션이 있는데 이름이 어떤 길이보다 짧은 사람의 명단을 얻고 싶다고 하자.
+이를 처리하기 위해서는 각 사람의 이름으로 map한 다음에 이름 중에서 길이가 긴 사람을 제외시켜야 한다.
+
+이 경우 map과 filter를 어떤 순서로 수행해도 된다.
+그러나 map 다음에 filter를 하는 경우와 filter 다음에 map을 하는 경우 결과는 같아도 
+수행해야 하는 변환의 전체 횟수는 다르다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 29), Person("Bob", 31), Person("Charles", 31), Person("Dan", 21))
+>>> println(people.asSequence().map(Person::name).filter { it.length < 4 }.toList())  // map 다음에 filter 수행
+[Bob, Dan]
+>>> println(people.asSequence().filter { it.name.length < 4 }.map(Person::name).toList())   // filter 다음에 map 수행
+[Bob, Dan]
+```
+
+map을 먼저 하면 모든 원소를 변환한다.
+하지만 filter를 먼저 하면 부적절한 원소를 먼저 제외하기 때문에 그런 원소는 변환되지 않는다.
+
+> ### ✅자바 스트림과 코틀린 시퀀스 비교
+> **자바 8 스트림**을 아는 독자라면 **시퀀스**라는 개념이 스트림과 같다는 사실을 알았을 것이다. 
+> 코틀린에서 같은 개념을 따로 구현해 제공하는 이유는 
+> 안드로이드 등에서 예전 버전 자바를 사용하는 경우 자바 8에 있는 스트림이 없기 때문이다. 
+> 자바 8을 채택하면 현재 코틀린 컬렉션과 시퀀스에서 제공하지 않는 중요한 기능을 사용할 수 있다. 
+> **바로 스트림 연산(map과 filter 등)을 여러 CPU에서 병렬적으로 실행하는 기능**이 그것이다.
+
+<br/>
+
+
+## 5.4. 수신 객체 지정 람다: with와 apply
+
+
 
 <br/>
 
 
 
+> ### ✅
 
 <br/>
 <br/>
