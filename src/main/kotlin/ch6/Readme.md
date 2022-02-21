@@ -1001,7 +1001,7 @@ true
 fun foo(l: Long) = println(l)
 
 >>> val b: Byte = 1 // 상수 값은 적절한 타입으로 해석된다.
->>> val l: = b + 1L // + 는 Byte와 Long을 인자로 받을 수 있다.
+>>> val l = b + 1L // + 는 Byte와 Long을 인자로 받을 수 있다.
 >>> foo(42) // 컴파일러는 42를 Long 값으로 해석한다.
 42
 ```
@@ -1086,7 +1086,7 @@ NoResultProcessor에서 명시적으로 Unit을 반환할 필요는 없다.
 이런 경우를 표현하기 위해 코틀린에는 `Nothing`이라는 특별한 반환 타입이 있다.
 
 ```kotlin
-fun fail(mesage: String): Nothing {
+fun fail(message: String): Nothing {
     throw IllegalStateException(message)
 }
 
@@ -1247,7 +1247,7 @@ target에 해당하는 인자로 읽기 전용 컬렉션을 넘길 수 없다.
 ```kotlin
 >>> val source: Collection<Int> = arrayListOf(3, 5, 7)
 >>> val target: Collection<Int> = arrayListOf(1)
->>> copyElements(source, target)    // "target" 인자에서 컴파일 오류 발생
+>>> copyElement(source, target)    // "target" 인자에서 컴파일 오류 발생
 Error: Type mismatch: inferred type is Collection<Int> but MutableCollection<Int> was expected
 ```
 
@@ -1322,8 +1322,8 @@ fun printInUppercase(list: List<String>) {
     println(list.first())
 }
 
->>> val list = lisfOf("a", "b", "c")  //읽기 전용 컬렉션
->>> println(updateItem(list))  //자바 메소드에 파라미터로 코틀린 읽기 전용 컬렉션 전달
+>>> val list = listOf("a", "b", "c")  //읽기 전용 컬렉션
+>>> println(printInUppercase(list))  //자바 메소드에 파라미터로 코틀린 읽기 전용 컬렉션 전달
 [A, b, c]
 A
 ```
@@ -1369,7 +1369,7 @@ interface FileContentProcessor {
 
 ```kotlin
 class FileIndexer : FileContentProcessor {
-    override fun processConents(
+    override fun processContents(
         path: File, 
         binaryContents: ByteArray?, 
         textContents: List<String>? 
@@ -1395,9 +1395,9 @@ interface DataParser<T> {
 ```kotlin
 class PersonParser : DataParser<Person> {
     override fun parseData(
-        input: String, output: 
-        MutableList<Person>, errors: 
-        MutableList<String?>
+      input: String?,
+      output: MutableList<Person>,
+      errors: MutableList<String?>
     )
 }
 ```
