@@ -445,6 +445,7 @@ person.company!!.address!!.country // 이런 식으로 코드 작성하지 말�
 `let` 함수를 사용하면 널이 될 수 있는 식을 더 쉽게 다룰 수 있다.
 `let` 함수를 안전한 호출 연산자와 함께 사용하면 **원하는 식을 평가해서 결과가 널인지 검사한 다음**에 
 **그 결과를 변수에 넣는 작업을 간단한 식을 사용해 한꺼번에 처리**할 수 있다.
+(Function selection :  https://kotlinlang.org/docs/scope-functions.html)
 
 let을 사용하는 가장 흔한 용례는
 <span style="color:orange">널이 될 수 있는 값을 널이 아닌 값만 인자로 받는 함수에 넘기는 경우</span>다.
@@ -471,7 +472,7 @@ let 함수는 자신의 수신 객체를 인자로 전달받은 람다에게 넘
 
 ```mermaid
 flowchart LR
-    B["""foo?.let {<br/>...it...<br/>}"""] -->|foo != null| C["it은 람다 안에서 널이 아니다"]
+    B["foo?.let {\n...it...\n}"] -->|foo != null| C["it은 람다 안에서 널이 아니다"]
     B -->|foo == null| E["아무 일도 일어나지 않는다"]
 ```
 
