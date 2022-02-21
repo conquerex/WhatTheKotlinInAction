@@ -108,7 +108,7 @@ null이 아님이 확실한 영역에서는 해당 값을 널이 될 수 없는 
 
 ```kotlin
 fun strLenSafe(s: String?): Int =
-if (s != null) s.length else 0  // null 검사를 추가하면 코드가 컴파일된다.
+    if (s != null) s.length else 0  // null 검사를 추가하면 코드가 컴파일된다.
 
 >>> val x: String? = null
 >>> println(strLenSafe(x))
@@ -239,7 +239,7 @@ fun Person.countryName(): String {
 }
 
 >>> val person = Person("Dmitry", null)
->>> println(preson.countryName())
+>>> println(person.countryName())
 Unknown
 ```
 
@@ -260,7 +260,7 @@ null인 경우에 대응하는 "Unknown"을 반환한다.
 
 ```kotlin
 fun foo(s: String?) {
-    val t: Sring = s ?: ""  // "s"가 null이면 결과는 빈 문자열("")이다.
+    val t: String = s ?: ""  // "s"가 null이면 결과는 빈 문자열("")이다.
 }
 ```
 
