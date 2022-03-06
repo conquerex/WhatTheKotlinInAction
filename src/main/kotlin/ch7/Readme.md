@@ -378,20 +378,276 @@ in 연산자는 원소가 컬렉션이나 범위에 속하는지 검사하거나
 
 ## 7.3.1. 인덱스로 원소에 접근: get과 set
 
+코틀린에서 맵의 원소에 접근할 때나 자바에서 배열 원소에 접근할 때 모두 각괄호([ ])를 사용한다는 사실을 알고 있다.
+같은 연산자를 사용해 변경 가능 맵에 키/값 쌍을 넣거나 이미 맵에 들어있는 키/값 연관 관계를 변경할 수 있다.
+
+```kotlin
+val value = map[key]
+
+mutablaMap[key] = newValue
+```
+
+코틀린에서는 인덱스 연산자도 관례를 따른다.
+인덱스 연산자를 사용해 원소를 읽는 연산은 get으로 변환되고 원소를 쓰는 연산은 set으로 변환된다.
+Map과 MutableMap 인터페이스에는 get, set 연산자 메소드가 이미 들어있다.
+
+```kotlin
+// get 연산자 함수를 정의한다
+operator fun Point.get(index: Int): Int{
+    return when(index){
+        // 주어진 인덱스에 해당하는 좌표를 찾는다
+        0 -> x
+        1 -> y
+        else -> throw IndexOutOfBoundsException("Invalid coordinate $index")
+    }
+}
+
+val p = Point(10,20)
+println(p[1])
+
+// 결과
+20
+```
+
+get 매소드를 만들고 operator 변경자를 붙이면 된다.
+p[1]이라는 식은 p가 Point 타입인 경우 방금 정의한 get 메소드로 변환된다.
+
+```mermaid
+graph LR
+      A["x[a, b]"]-->B["x.get(a, b)"]
+```
+각괄호를 사용한 접근은 get 함수 호출로 변환된다.
+
+
+
+`get` 메소드의 파라미터로 Int가 아닌 타입도 사용할 수 있다.
+예를 들면 맵 인덱스 연산의 경우 get 파라미터 타입은 맵의 키 타입과 같은 타입이 될 수 있다.
+
+또한 여러 파라미터를 사용하는 `get`을 정의할 수도 있다.
+예를 들면 2차원 행렬이나 배열을 표현하는 클래스에
+operator fun get(rowIndex: Int, colIndex: Int)를 정의하면
+matrix[row, col] 으로 get 메소드를 호출할 수 있다.
+컬렉션 클래스가 다양한 키 타입을 지원해야 한다면 다양한 파라미터 타입에 대해 오버로딩한 get 메소드를 여럿 정의할 수도 있다.
+
+인덱스에 해당하는(a[index]) 컬렉션 원소를 쓰고 싶을 때는 `set`이라는 함수를 정의하면된다.
+불변 클래스는 set을 쓸 수 없다. 변경 가능한 클래스에서 가능하다.
+
+```kotlin
+data class MutablePoint(var x: Int, var y: Int)
+
+// set이라는 연산자 함수를 정의한다
+operator fun MutablePoint.set(index: Int, value: Int) {
+    when(index) {
+        // 주어진 인덱스에 해당하는 좌표를 변경한다
+        0 -> x = value
+        1 -> y = value
+        else -> throw IndexOutOfBoundsException("Invalid coordinate $index")
+    }
+}
+
+>>> var p = MutablePoint(10, 20)
+>>> p[1] = 42
+>>> println(p)
+MutablePoint(x=10, y=42)
+```
+
+대입에 인덱스 연산자를 사용하려면 `set`이라는 이름의 함수를 정의해야 한다.
+set이 받는 마지막 파라미터 값은 대입문의 우항에 들어가고, 나머지 파라미터 값은 인덱스 연산자([])에 들어간다.
+
+```mermaid
+graph LR
+      A["x[a, b] = c"]-->B["x.set(a, b, c)"]
+```
+각괄호를 사용한 대입문은 set 함수 호출로 컴파일된다.
+
 
 <br/>
 
 
-## 7.3.
+## 7.3.2. in관례
+
+in은 객체가 컬렉션에 들어있는지 검사(멤버십 검사)한다. (true/false)
+이 경우에 in 연산자는 contain 함수를 호출한다.
+
+```kotlin
+data class Rectangle(val upperLeft: Point, val lowerRight: Point)
+operator fun Rectangle.comtains(p: Point): Boolean {
+    // 범위를 만들고 x좌표가 그 범위 안에 있는지 검사한다
+    return p.x in upperLeft.x until lowerRight.x &&
+            // until 함수를 사용해 열린 범위를 만든다
+            p.y in upperLeft.y until lowerRight.y
+}
+
+>>> val rect = Rectangle(Point(10, 20), Point(50, 50))
+>>> println(Point(20, 30) in rect)
+true
+>>> println(Point(5, 5) in rect)
+false
+```
+
+in의 우항에 있는 객체는 contains 메소드의 `수신 객체`(예제에서는 Rectangle)가 되고, 
+in의 좌항에 있는 객체는 contains 메소드에 `인자`(예제에서는 Point)로 전달된다.
+
+```mermaid
+graph LR
+      A["a in c"]-->B["c.contains(a)"]
+```
+in 연산자는 contains 함수 호출로 변환된다.
+
+in은 열린범위이다. 열린범위는 끝 값을 포함하지 않는 범위.
+
+..은 닫힌범위이다. (10..20). 닫힌범위는 끝 값을 포함하는 범위.
 
 
 <br/>
 
 
-## 7.2.
+## 7.3.3. rangeTo 관례
+
+1..10 : 1부터 10까지 모든 수가 들어있는 범위를 가리킨다.
+`..`연산자는 rangeTo 함수를 간략하게 표현하는 방법이다.
+
+```mermaid
+graph LR
+      A["start .. end"]-->B["start.rangeTo(end)"]
+```
+`..`연산자는 rangeTo로 컴파일된다.
+
+
+<span style="color:orange">rangeTo 함수는 범위를 반환</span>한다.
+이 연산자(rangeTo 함수)는 아무 클래스에나 정의할 수 있지만,
+클래스가 Comparable 인터페이스를 구현하면 이 연산자(rangeTo 함수)를 정의하지 않아도 된다.
+왜냐면 코틀린 표준 라이브러리에는 모든 Comparable 객체에 대해 적용 가능한 rangeTo 함수가 들어있다.
+
+```kotlin
+operator fun <T: Comparable<T>> T.rangeTo(that: T): ClosedRange<T>
+```
+
+이 함수는 범위를 반환하며, 어떤 원소가 그 범위 안에 들어있는지 in을 통해 검사할 수 있다.
+
+```kotlin
+val now = LocalDate.now()
+// 오늘부터 시작해 10일짜리 범위를 만든다
+val vacation = now..now.plusDays(10)
+// 특정 날짜가 날짜 범위 안에 들어가는지 검사
+println(now.plusWeeks(1) in vacation)
+
+// 결과
+true
+```
+
+now.rangeTo(now.plusDays(10)) 으로 컴파일러에 의해 변환된다.
+rangeTo 함수는 LocalDate의 멤버는 아니며, 앞에서 설명한대로 Comparable의 확장 함수.
+
+rangeTo 연산자는 다른 산술 연산자보다 우선순위가 낮다. 하지만 혼동을 피하기 위해 괄호로 감싸주는 것이 더 좋다.
+또한, 범위 연산자는 우선 순위가 낮아서 범위의 메소드를 호출하려면 범위를 괄호로 둘러싸야 한다.
+
+```kotlin
+val n = 9
+println(0..(n+1))  // 산술연산자보다 우선순위가 낮다
+
+(0..n).forEach { println(it) } // 우선순위가 낮아서 메서드 호출시 괄호를 써주는게 좋다.
+```
+
+<br/>
+
+
+## 7.3.4. for 루프를 위한 iterator 관례
+
+2장에서 살펴봤듯이 코틀린의 for 루프는 범위 검사와 똑같이 in 연산자를 사용한다.
+하지만 의미는 다르다.
+`for (x in list){ ... }`와 같은 문장은 list.iterator()를 호출해서 이터레이터를 얻은 다음, 
+자바와 마찬가지로 그 이터레이터에 대해 hasNext, next 호출을 반복하는 식으로 변환된다.
+
+하지만 코틀린에서는 이 또한 관례이므로 iterator 메소드를 확장 함수로 정의할 수 있다. 
+이런 성질로 인해 자바 문자열에 대한 for 루프가 가능하다.
+코틀린은 String의 상위 클래스인 CharSequence에 대한 iterator 확장 함수를 제공한다. 
+따라서 아래와 같은 구문이 가능하다.
+
+```kotlin
+// 이 라이브러리 함수는 문자열을 이터레이션 할 수 있게 해준다.
+operator fun CharSequence.iterator(): CharIterator
+
+for(c in "abc") { }
+```
+
+클래스 안에 직접 iterator를 구현한 예이다.
+
+```kotlin
+operator fun ClosedRange<LocalDate>.iterator(): Iterator<LocalDate> =
+  // 이 객체는 LocalDate 원소에 대한 iterator를 구현한다.
+  object : Iterator<LocalDate> {
+    var current = start
+    override fun hasNext() =
+      // compareTo 관례를 사용해 날짜를 비교한다.
+      current <= endInclusive
+
+    // 현재 날짜를 저장한 다음에 날짜를 변경한다. 그 후 저장해둔 날짜를 반환한다.
+    override fun next() = current.apply {
+      // 현재 날짜를 1일 뒤로 변경한다
+      current = plusDays(1)
+    }
+  }
+
+val newYear = LocalDate.ofYearDay(2017, 1)
+val daysOff = newYear.minusDays(1)..newYear
+for (dayOff in daysOff) { println(dayOff) }
+
+// 결과
+2016-12-31
+2017-01-01
+```
+
+앞에서 rangeTo 함수가 ClosedRange 인스턴스를 반환한다. 
+코드에서 ClosedRange<LocaDate>에 대한 확장 함수 Iterator를 정의했기 때문에 
+LocalDate의 범위 객체를 for 루프에서 사용할 수 있다.
+
+- CloseRange<LocalData>
+  - LocalData 타입의 원소를 가지고 있는 컬렉션인 CloseRange.
+- .iterator() : Iterator<LocalDate>
+  - 확장 함수 iterator() 정의. 반환 타입은 LocalDate 원소를 가지고 있는 Iterator 컬렉션.
+- object : Iterator<LocalDate>
+  - LocalDate 타입의 원소를 가지고 있는 Iterator 컬렉션이 타입인 익명객체를 만듬.
+- var current = start
+  - start : The minimum value in the range.
+  - 변수 current에 할당해줌.
+- hasNext()
+  - current에 원소가 들어있는지 확인해서 있으면 true를 반환한다.
+  - true면 for문의 본문이 실행된다.
+  - false면 for문 종료
+  - current <= endInclusive
+  - current.compareTo(endInclusive) <= 0
+  - current.compareTo(endInclusive) 의 값이 -거나 0이 나오면 true.
+  - +값이 나오거나 바로 false가 반환되면 for문 종료
+- next()
+  - current 값을 다음 원소 값으로 변경해준다.
+  - hasNext()가 true를 반환할경우 next()에서 적용된 원소값으로 본문을 실행한다.
+
+<br/>
+<br/>
+
+
+
+## 7.4. 구조 분해 선언과 component 함수
 
 
 <br/>
+
+
+## 7.4.
+
+<br/>
+
+
+## 7.4.
+
+<br/>
+
+
+## 7.4.
+
+<br/>
+
 
 
 
