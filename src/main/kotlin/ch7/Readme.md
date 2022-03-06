@@ -255,35 +255,134 @@ println(++bd)
 
 ## 7.2. 비교 연산자 오버로딩
 
+equals, compareTo를 호출해야 하는 자바와 달리 
+코틀린에서는 == 비교 연산자를 직접 사용함으로써 코드가 간결하며 이해하기 쉬운 장점이 있다.
 
 <br/>
 
 
-## 7.2.
+## 7.2.1. 동등성 연산자 : equals
+
+!= 연산자도 equals로 컴파일된다. 이는 비교 결과를 뒤집은 값을 결과값으로 사용한다.
+==와 !=는 내부에서 인자가 널인지 검사하므로 다른 연산과 달리 널이 될 수 있는 값에도 적용할 수 있다.
+
+a가 널인지 판단해서 널이 아닌 경우에만 a.equals(b)를 호출한다.
+만약 a가 널이라면 b도 널인 경우에만 결과가 true가 된다.
+
+```mermaid
+graph LR
+      A["a == b"]-->B["a?.equals(b) ?: (b == null)"]
+```
+
+동등성 검사 `==`는 equals 호출과 널 검사로 컴파일된다.
+
+Point는 data class이므로 컴파일러가 자동으로 equals를 생성해준다.
+
+```kotlin
+class Point(val x: Int, val y: Int){
+  // Any에 정의된 메소드 오버라이딩
+  override equals(obj: Any?): Boolean {
+    // 최적화 : 파라미터가 this와 같은 객체인지
+    if(this === obj) return true
+    // 파라미터 타입 검사
+    if(obj !is Point) return false
+    // Point로 스마트 캐스트해서 x와 y 프로퍼티에 접근
+    return x == obj.x && y == obj.y
+  }
+}
+
+println(Point(1, 2) == Point(1, 2)) // true 
+println(Point(1, 2) != Point(4, 5)) // true 
+println(null == Point(3, 2)) // false
+```
+
+`===`(식별자 비교 연산자)를 사용해 equals의 파라미터가 수신 객체와 같은지 확인한다. ===는 자바의 == 연산자와 같다. 
+따라서 ===는 자신의 두 피연산자가 서로 같은 객체를 가리키는지(원시 타입인 경우 두 값이 같은지) 비교한다.
+
+===를 사용해 자기 자신과의 비교를 최적화하는 경우가 많으며, ===는 오버로딩할 수 없다.
+Any의 equals에는 operator가 붙어있지만 그 메소드를 오버라이드하는 하위 클래스의 메소드 앞에는 
+operator를 붙이지 않아도 자동으로 상위 클래스의 operator 지정이 적용된다. 
+
+또한, Any에서 상속받은 equals가 확장 함수보다 우선순위가 높기 때문에 equals를 확장 함수로 정의할 수 없다.
+
+`!=`는 equals의 반환 값에 반전을 하여 값을 돌려준다. 즉, 개발자 따로 정의할 필요가 없다.
+
 
 
 <br/>
 
 
-## 7.2.
+## 7.2.2. 순서 연산자 : compareTo
+
+자바에서 정렬이나 최댓값, 최솟값 등 값을 비교하는 알고리즘에 사용할 클래스는 `Comparable` 인터페이스를 구현한다.
+코틀린도 똑같은 Comparable 인터페이스를 지원한다. 
+
+게다가 코틀린은 Comparable 인터페이스 안에 있는 `compareTo` 메소드를 호출하는 관례를 제공한다.
+따라서 비교 연산자(<, >, <=, >=)는 compareTo 호출로 컴파일 된다.
+반환값은 Int이다. 다른 비교 연산자도 동일한 방식으로 동작한다.
+
+```mermaid
+graph LR
+      A["a >= b"]-->B["a.compareTo(b) >= 0"]
+```
+
+```kotlin
+class Person(val firstName: String, val lastName: String): Comparable<Person>{
+    override fun compareTo(other: Person): Int {
+        // 인자로 받은 함수를 차례로 호출하면서 값을 비교한다
+        return compareValuesBy(this, other, Person::lastName, Person::firstName)
+    }
+}
+
+val person1 = Person("Alice", "Smith")
+val person2 = Person("Bob", "Johnson")
+println(person1 < person2)
+
+// Result
+false
+```
+
+여기서 저의한 Person 객체의 Comparable 인터페이스를 코틀린뿐 아니라 자바 쪽의 컬렉션 정렬 메소드 등에도 사용할 수 있다.
+equals와 마찬가지로 Comparable의 compareTo에도 operator 변경자가 붙어있으므로 
+하위 클래스의 오버라이딩 함수에 operator를 붙일 필요가 없다.
+
+`compareValuesBy`는 두 개의 객체와 여러 비교 함수를 인자로 받는다. 
+첫 번째 비교 함수에 두 객체를 넘겨 값을 비교 후 같지 않다면 그 결과를 반환하고
+같다면 두 번째 비교 함수를 이용하여 비교한다.
+이렇게 지정한 비교함수를 지속적으로 비교한다. 만약 모든 비교 함수가 0을 반환하면 최종으로 0을 반환한다.
+
+필드를 직접 비교하면 코드는 조금 더 복잡해지긴 하지만 비교 속도는 훨씬 빠르다.
+코드를 작성할 때 일반적으로 이해하기 쉽게 코드를 작성하고 
+나중에 그 코드가 얼마나 자주 호출됨에 따라 성능에 문제가 발생한다면 그때 성능을 개선한다.
+
+```kotlin
+println("abc" > "def")
+```
 
 
 <br/>
 
 
-## 7.2.
+## 7.3. 컬렉션과 범위에 대해 쓸 수 있는 관례
+
+컬렉션을 다룰 때 가장 많이 쓰는 연산은 인덱스를 사용해 원소를 읽거나 쓰는 연산과 
+어떤 값이 컬렉션에 포함되어 있는지 확인하는 연산이다.
+
+이 연산들을 연산자 구문으로 사용할 수 있다. 
+인덱스를 사용해 원소를 설정하거나 가져오고 싶을 때는 `a[b]`라는 식을 사용한다.
+(이를 <span style="color:orange">인덱스 연산자</span>라고 부른다.) 
+in 연산자는 원소가 컬렉션이나 범위에 속하는지 검사하거나 컬렉션에 있는 원소를 이터레이션할 때 사용합니다.
+
+<br/>
+
+
+## 7.3.1. 인덱스로 원소에 접근: get과 set
 
 
 <br/>
 
 
-## 7.2.
-
-
-<br/>
-
-
-## 7.2.
+## 7.3.
 
 
 <br/>
