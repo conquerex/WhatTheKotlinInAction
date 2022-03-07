@@ -1217,25 +1217,6 @@ Users.name(varchar), User.age(integer)는 각각 위임 객체 관례에 따른 
 
 
 <br/>
-
-
-
-
-
-> ### ✅
-
-
-<span style="color:orange">xxxx</span>
-
-
-```mermaid
-graph TD
-      A-->B
-      A-->C
-      B-->D
-      C-->D
-```
-
 <br/>
 <br/>
 <br/>
