@@ -834,20 +834,381 @@ foo.p는 일반 프로퍼티처럼 쓸 수 있고, 일반 프로퍼티 같아 �
 
 ## 7.5.2. 위임 프로퍼티 사용 : by lazy()를 사용한 프로퍼티 초기화 지연
 
+<span style="color:orange">지연 초기화</span>는 객체의 일부분을 초기화하지 않고 남겨뒀다가 
+실제로 그 부분의 값이 필요할 경우, 초기화할 때 흔히 쓰이는 패턴이다.
+초기화 과정에 자원을 많이 사용하거나 객체를 사용할 때마다 꼭 초기화하지 않아도 되는 프로퍼티에 대해 
+지연 초기화 패턴을 사용할 수 있다.
+
+Person 클래스가 자신이 작성한 이메일의 목록을 제공한다고 가정. 
+이메일은 데이터베이스에 들어있어서 불러오려면 시간이 오래 걸려서, 
+이메일 프로퍼티의 값을 최초로 사용할 때 단 한 번만 가져오고 싶다.
+
+```kotlin
+class Email{ /*...*/ }
+
+fun loadEmails(person: Person): List<Email> {
+    println("${person.name}의 이메일을 가져옴")
+    return listOf(/*...*/)
+}
+```
+
+다음은 이메일을 불러오기 전에는 null을 저장하고, 불러온 다음에는 이메일 리스트를 저장하는 _emails 프로퍼티를 추가해서 
+지연 초기화를 구현한 클래스를 보여준다.
+
+```kotlin
+class Person(val name: String) {
+    // 데이터를 저장하고 emails의 위임 객체 역할을 하는 _emails 프로퍼티
+    private var _emails: List<Email>? = null
+    val emails: List<Email>
+       get() {
+           if (_emails == null) {
+               // 최초 접근시 이메일을 가져온다
+               _emails = loadEmails(this) 
+           }
+            // 저장해 둔 데이터가 있으면 그 데이터를 반환 
+           return _emails!!
+       }
+}
+
+val p = Person("Alice")
+// 최초로 emails를 읽을 때 단 한 번만 이메일을 가져온다
+p.emails
+
+// 결과
+Load emails for Alice
+```
+
+<span style="color:orange">뒷받침하는 프로퍼티</span>라는 기법을 사용한다.
+_emails 프로퍼티는 값을 저장하고, emails 프로퍼티는 _emails 프로퍼티에 대한 읽기 연산을 제공한다. 
+_emails는 Nullable 하고, emails는 널이 될 수 없는 타입이므로 프로퍼티 2개를 사용해야 한다. 
+이런 기법은 자주 사용된다.
+
+이와 같은 방법은 성가시며, 스레드 안전하지 않아서 언제나 제대로 동작한다고 말할 수 없다.
+대신 위임 프로퍼티를 사용해보자.
+
+```kotlin
+class Person(val name: String){
+  val emails by lazy { loadEmails(this) }
+}
+```
+
+`lazy` 함수는 코틀린 관례에 맞는 시그니처의 getValue() 메소드가 들어있는 객체를 반환한다. 
+따라서 lazy와 by 키워드와 함께 사용해 위임 프로퍼티를 만들 수 있다.
+
+lazy 함수의 인자는 값을 초기화할 때 호출할 람다다. 그리고 lazy 함수는 기본적으로 스레드 안전하다. 
+추가적으로 필요에 따라 동기화에 사용할 락을 lazy 함수에 전달할 수도 있고, 
+다중 스레드 환경에서 사용하지 않을 프로퍼티를 위해 lazy 함수가 동기화를 하지 못하게 막을 수도 있다.
+
+
 <br/>
 
 
-## 7.5.
+## 7.5.3. 위임 프로퍼티 구현
+
+어떤 객체를 UI에 표시하는 경우 객체가 바뀌면 자동으로 UI도 바뀌어야 한다.
+
+`PropertyChangeSupport` 클래스는 리스너의 목록을 관리하고 
+`PropertyChangeEvent` 이벤트가 들어오면 목록의 모든 리스너에게 이벤트를 통지한다.
+
+필드를 모든 클래스에 추가하고 싶지는 않으므로 PropertyChangeSupport 인스턴스를 `changeSupport`라는 필드에 저장하고 
+프로퍼티 변경 리스너를 추적해주는 작은 도우미 클래스를 만들자.
+
+```kotlin
+open class PropertyChangeAware {
+    protected val changeSupport = PropertyChangeSupport(this)
+    
+    fun addPropertyChangeListener(listener: PropertyChangeListener) {
+        changeSupport.addPropertyChangeListener(listener)
+    }
+    
+    fun removePropertyChangeListener(listener: PropertyChangeListener) {
+        changeSupport.removePropertyChangeListener(listener)
+    }
+}
+```
+
+이제 읽기 전용 프로퍼티와 변경 가능한 프로퍼티를 정의할 Person 클래스를 작성하자.
+
+```kotlin
+class Person(
+    val name: String, age: Int, salary: Int
+) : PropertyChangeAware() {
+    var age: Int = age
+    set(newValue) {
+        // 뒷받침하는 필드에 접근할 때 field 식별자를 사용
+        val oldValue = field
+        field = newValue
+        // 프로퍼티 변경을 리스너에게 통지한다
+        changeSupport.firePropertyChange("age", oldValue, newValue)
+    }
+
+    var salary: Int = salary
+    set(newValue) {
+        val oldValue = field
+        field = newValue
+        changeSupport.firePropertyChange("salary", oldValue, newValue)
+    }
+}
+
+>>> val p = Person("Dmitry", 34, 2000)
+    // 프로퍼티 변경 리스너를 추가한다. 
+>>> p.addPropertyChangeListener(
+        PropertyChangeListener { event ->
+            println("Property ${event.propertyName} changed from ${event.oldValue} to ${event.newValue}")
+        }
+    )
+>>> p.age = 35
+>>> p.salary = 2100
+
+// 결과
+Property age changed from 34 to 35
+Property salary changed from 2000 to 2100
+```
+
+이 코드는 field 키워드를 사용해 age와 salary 프로퍼티를 뒷받침하는 필드에 접근하는 방법을 보여준다.
+
+세터 코드의 중복이 많이 보이므로 이를 제거하고 프로퍼티의 값을 저장하고, 필요에 따라 통지를 보내주는 클래스를 추출하자.
+
+```kotlin
+class ObservableProperty(
+    val propertyName: String, var propertyValue: Int,
+    val changeSupport: PropertyChangeSupport
+) {
+    fun getValue(): Int = propertyValue
+    fun setValue(newValue: Int) {
+        val oldValue = propertyValue
+        propertyValue = newValue
+        changeSupport.firePropertyChange(propertyName, oldValue, newValue)
+    }
+}
+
+class Person(
+    val name: String, age: Int, salary: Int
+) : PropertyChangeAware() {
+    val _age = ObservableProperty("age", age, changeSupport)
+
+    var age: Int
+        get() = _age.getValue()
+        set(value) { _age.setValue(value) }
+
+    val _salary = ObservableProperty("salary", salary, changeSupport)
+    var salary: Int
+        get() = _salary.getValue()
+        set(value) { _salary.setValue(value) }
+}
+```
+
+프로퍼티 값을 저장하고 그 값이 바뀌면 자동으로 변경 통지를 전달해주는 클래스를 만들었고, 로직의 중복을 상당 부분 제거했다.
+
+하지만 아직도 각각의 프로퍼티마다 `ObservableProperty`에 작업을 위임하는 준비 코드가 상당 부분 필요하다.
+코틀린의 <span style="color:orange">위임 프로퍼티 기능</span>을 활용하여 이런 준비 코드를 없앨 수 있다.
+그전에 `ObservableProperty`에 있는 두 메소드의 시그니처를 코틀린의 관례에 맞게 수정해야 한다.
+
+```kotlin
+class ObservableProperty(
+    var propertyValue: Int,
+    val changeSupport: PropertyChangeSupport
+) {
+    operator fun getValue(person: Person, property: KProperty<*>): Int = propertyValue
+    operator fun setValue(person: Person, property: KProperty<*>, newValue: Int) {
+        val oldValue = propertyValue
+        propertyValue = newValue
+        changeSupport.firePropertyChange(property.name, oldValue, newValue)
+    }
+}
+```
+이전 코드와의 차이점.
+
+- 코틀린 관례에 사용하는 다른 함수와 마찬가지로 getValue와 setValue 함수에도 `operator` 변경자가 붙는다.
+- `getValue`와 `setValue`는 프로퍼티가 포함된 객체와 프로퍼티를 표현하는 객체를 파라미터로 받는다.
+- `KProperty` 인자를 통해 프로퍼티 이름을 전달받으므로 주 생성자에서는 `name` 프로퍼티를 없앤다.
+
+이제 위임 프로퍼티를 사용해 코드를 간결히 할 수 있다.
+
+```kotlin
+class Person(
+    val name: String, age: Int, salary: Int
+) : PropertyChangeAware() {
+    var age: Int by ObservableProperty(age, changeSupport)
+    var salary: Int by ObservableProperty(salary, changeSupport)
+}
+```
+
+by 키워드를 사용해 위임 객체를 지정하면 이전 예제에서 직접 코드를 짜야 했던 여러 작업을 
+코틀린 컴파일러가 자동으로 처리해준다. 
+
+즉, 컴파일러가 만들어주는 코드는 이전에 직접 작성했던 Person 코드와 비슷하다. 
+by 오른쪽에 오는 객체(예제에서는 ObservableProperty)를 
+<span style="color:orange">위임 객체(delegate)</span>라고 부른다. 
+코틀린은 위임 객체를 감춰진 프로퍼티에 저장하고, 주 객체의 프로퍼티를 읽거나 쓸 때마다 
+위임 객체의 getValue와 setVlaue를 호출해준다.
+
+관찰 가능한 프로퍼티 로직을 직접 작성하는 대신 코틀린 표준 라이브러리를 사용해도 된다. 
+표준 라이브러리에는 이미 ObservableProperty와 비슷한 클래스가 있다. 
+
+다만 이 표준 라이브러리의 클래스는 PropertyChangeSupport와 연결되어 있지 않아서 
+프로퍼티 값을 변경을 통지할 때 PropertyChangeSupport를 사용하는 방법을 알려주는 람다를 
+그 표준 라이브러리 클래스에 넘겨야 한다.
+
+```kotlin
+class Person(
+    val name: String, age: Int, salary: Int
+): PropertyChangeAware() {
+    // 람다 작성
+    private val observer = {
+        prop: KProperty<*>, oldValue: Int, newValue: Int ->
+        changeSupport.firePropertyChange(prop.name, oldValue, newValue)
+    }
+    
+    // Delegates.observable을 사용
+    var age: Int by Delegates.observable(age, observer)
+    var salary: Int by Delegates.observable(salary, observer)
+}
+```
+
+by 오른쪽에 있는 식이 꼭 새 인스턴스를 만들 필요는 없다. 
+함수 호출, 다른 프로퍼티, 다른 식 등이 by의 우항에 올 수 있다. 
+
+다만 우항에 있는 식을 계산한 결과인 객체는 컴파일러가 호출할 수 있는 
+올바른 타입의 getValue와 setValue를 반드시 제공해야 한다. 
+다른 관례와 마찬가지로 getValue와 setValue 모두 객체 안에 정의된 메소드이거나 확장 함수일 수 있다.
+
+예제에서는 Int 타입의 프로퍼티 위임만 사용했지만, 프로퍼티 위임 메커니즘을 모든 타입에 사용할 수 있다.
 
 <br/>
 
 
-## 7.5.
+## 7.5.4. 위임 프로퍼티 컴파일 규칙
+
+아래와 같은 위임 프로퍼티가 있는 클래스가 있다고 가정하자.
+
+```kotlin
+class C {
+    var prop: Type by MyDelegate()
+}
+
+val c = C()
+```
+
+컴파일러는 MyDelegate 클래스의 인스턴스를 감춰진 프로퍼티에 저장하며 
+그 감춰진 프로퍼티는 <span style="color:orange">\<delegate></span>라는 이름으로 부른다. 
+
+또한, 컴파일러는 프로퍼티를 표현하기 위해 KProperty 타입의 객체를 사용한다. 
+이 객체를 <span style="color:orange">\<property></span>라고 부른다.
+
+컴파일러는 다음의 코드를 생성한다.
+
+```kotlin
+class C {
+    private val <delegate> = MyDelegate()
+    var prop: Type
+    get() = <delegate>.getValue(this, <property>)
+    set(value: Type) = <delegate>.setValue(this, <property>, value)
+}
+```
+
+컴파일러는 모든 프로퍼티 접근자 안에 getValue와 setValue 호출 코드를 생성해준다.
+
+```mermaid
+graph LR
+      A["val x = c.prop"]-->B["val x = <delegate>.getValue(c, <property>)"]
+      C["c.prop = x"]-->D["<delegate>.setValue(c, <property>, x)"]
+```
+프로퍼티를 사용하면 \<delegate>에 있는 getValue나 setValue 함수가 호출된다.
+
+이 매커니즘은 상당히 단순하지만, 상당히 흥미로운 활용법이 많다.
+- 프로퍼티 값이 저장될 장소를 바꿀 수도 있고(맵, 데이터베이스 테이블, 사용자 세션의 쿠키 등) 
+- 프로퍼티를 읽거나 쓸 때 벌어질 일을 변경할 수도 있다.(값 검증, 변경 통지 등)
+
 
 <br/>
 
 
-## 7.5.
+## 7.5.5. 프로퍼티 값을 맵에 저장
+
+자신의 프로퍼티를 동적으로 정의할 수 있는 객체를 만들 때 위임 프로퍼티를 활용하는 경우가 자주 있다.
+그런 객체를 <span style="color:orange">확장 가능한 객체(expando object)</span>라고 한다.
+
+연락처 관리 시스템에서 연락처별로 임의의 정보를 저장할 수 있게 허용하는 경우. 
+시스템에 저장된 연락처에는 특별히 처리해야 하는 일부 필수 정보(이름 등)가 있고, 
+사람마다 달라질 수 있는 추가정보가 있다.(자식 생일 등)
+
+```kotlin
+class Person {
+    private val _attributes = hashMapOf<String, String>()
+
+    fun setAttribute(attrName: String, value: String) {
+        _attributes[attrName] = value
+    }
+    val name: String
+        // 수동으로 맵에서 정보를 꺼낸다
+        get() = _attributes["name"]!!
+}
+
+>>> val p = Person()
+>>> val data = mapOf("name" to "Dmitry", "company" to "JetBrains")
+>>> for((attrName, value) in data)
+        p.setAttribute(attrName, value)  
+>>> println(p.name)
+}
+
+// 결과
+Dmitry
+```
+
+이 코드는 추가 데이터를 저장하기 위해 일반적인 API를 사용하고(실제 프로젝트에서는 JSON 역직렬화 등의 기술을 활용할 수 있음), 
+특정 프로퍼티(name)을 처리하기 위해 구체적인 API를 제공한다. 
+이를 쉽게 위임 프로퍼티를 활용하게 변경할 수 있다. 
+by 키워드 뒤에 맵을 직접 넣으면 된다.
+
+```kotlin
+class Person {
+    private val _attributes = hashMapOf<String, String>()
+    
+    fun setAttribute(attrName: String, value: String) {
+        _attributes[attrName] = value
+    }
+    // 위임 프로퍼티를 맵에 사용
+    val name: String by _attributes
+}
+```
+
+이런 코드가 작동하는 이유는 표준 라이브러리가 Map과 MutableMap 인터페이스에 대해 
+getValue와 setValue 확장 함수를 제공하기 때문이다. 
+getValue에서 맵에 프로퍼티를 값을 저장할 때는 자동으로 프로퍼티 이름을 키로 활용한다. 
+여기서 p.name은 _attributes.getValue(p, prop)라는 호출을 대신하고, 
+_attributes.getValue(p, prop)는 다시 _attributes[prop.name]을 통해 구현된다.
+
+
+<br/>
+
+## 7.5.6. 프레임워크에서 위임 프로퍼티 활용
+
+객체 프로퍼티를 저장하거나 변경하는 방법을 바꿀 수 있으면 프레임 워크를 개발할 때 유용하다.
+데이터베이스에 User라는 테이블이 있고 name, age를 컬럼으로 갖는다.
+
+```kotlin
+object Users: IdTable() { // 객체는 데이터 베이스 테이블에 해당한다.
+    // 프로퍼티는 테이블 칼럼에 해당한다.
+    val name = varchar("name", length = 50).index()
+    val age = integer("age")
+
+}
+
+class User(id: EntityID) : Entity(id){ // 각 User 인스턴스는 테이블에 들어있는 구체적인 엔티티에 해당
+    // 사용자 이름은 데이터 베이스 name 칼럼에 들어있다
+    var name: String by Users.name
+    var age: Int by Users.age
+}
+```
+
+Users 객체는 데이터베이스 테이블이라 1개만 존재 해야되서 싱글턴으로 생성.
+User의 상위 클래스인 Entity클래스는 데이터베이스 칼럼을 엔티티의 속성 값으로 연결해주는 매핑이 있다.
+
+User 프로퍼티에 접근할때 자동으로 Entity 클래스에 정의된 데이터베이스 맵핑으로 필요한 값을 가져온다.
+Users.name (varchar)  User.age(integer)는 각각 위임 객체 관례에 따른 시그니처를 요구사항을 구현한다.
+
+
 
 <br/>
 
