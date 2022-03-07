@@ -631,20 +631,223 @@ LocalDate의 범위 객체를 for 루프에서 사용할 수 있다.
 ## 7.4. 구조 분해 선언과 component 함수
 
 
+구조 분해를 사용하면 복합적인 값을 분해해서 여러 다른 변수를 한꺼번에 초기화할 수 있다.
+
+```kotlin
+>>> val p - Point(10, 20)
+>>> val (x, y) = p
+>>> println(x)
+>>> println(y)
+
+10
+20
+```
+
+구조 분해 선언은 일반 변수 선언과 비슷해 보이지만, =의 좌변에 여러 변수를 괄호로 묶는 것이 다르다.
+
+내부에서 구조 분해 선언은 다시 관례를 사용한다.
+구조 분해 선언의 각 변수를 초기화하기 위해 componentN 함수를 호출하는데, 
+N은 구조 분해 선언에 있는 변수 위치에 따라붙는 번호이다.
+
+```mermaid
+graph LR
+      A["val (a, b) = p"]-->B["val a = p.component1() <br/>
+                               val b = p.component2()"]
+```
+구조 분해 선언은 componentN 함수 호출로 변환된다.
+
+data 클래스의 주 생성자에 들어있는 프로퍼티에 대해 컴파일러가 자동으로 componentN 함수를 생성한다.
+
+```kotlin
+class Point(val x: Int, val y: Int){
+  operator fun component1() = x
+  operator fun component2() = y
+}
+```
+
+구조 분해 선언은 함수에서 여러 값을 반환할 때 유용하다.
+여러 값을 반환해야 하는 함수가 있다면 반환해야 하는 모든 값이 들어갈 holder 역할의 데이터 클래스를 정의하고 
+함수의 반환 타입을 그 데이터 클래스로 바꾼다. 
+구조 분해 선언 구문을 사용해 이 함수가 반환하는 값을 쉽게 풀어 여러 변수에 넣을 수 있다.
+
+```kotlin
+// 값을 저장하기 위한 데이터 클래스를 선언한다
+data class NameComponents(val name: String,
+                          val extension: String)
+
+fun splitFilename(fullName: String): NameComponents {
+    val result = fullName.split('.', limit = 2)
+    // 함수에서 데이터 클래스의 인스턴스를 반환한다
+    return NameComponents(result[0], result[1])
+}
+
+// 구조 분해 선언 구문을 사용해 데이터 클래스를 푼다.
+val (name, ext) = splitFilename("example.kt")
+println(name)
+println(ext)
+
+// Result
+example
+kt
+```
+
+<span style="color:orange">배열이나 컬렉션에도 componentN 함수가 있음</span>을 안다면 위 예제를 더 개선할 수 있다. 
+크기가 정해진 컬렉션을 다루는 경우 구조 분해가 특히 더 유용하다. 
+예를 들어 여기서 split은 2개의 원소로 이뤄진 리스트를 반환한다.
+
+```kotlin
+data class NameComponents(val name: String, val extension: String)
+
+fun splitFileName(fullName: String) : NameComponents {
+    val (name, ext) = fullName.split(".", limit = 2)
+    return NameComponents(name, ext)
+}
+```
+
+물론 무한히 componentN을 선언할 수 없으므로 이런 구문을 무한정 사용할 수는 없다. 
+그럼에도 불구하고 여전히 컬렉션에 대한 구조 분해는 유용하다. 
+코틀린 표준 라이브러리에서는 맨 앞의 다섯 원소에 대한 componentN을 제공한다.
+
+> 코틀린은 맨 앞의 다섯 원소에 대한 componentN 함수를 제공한다. 
+> 따라서 컬렉션의 크기가 5보다 작아도 1~5까지접근이 가능하다. 
+> 하지만, IndexOutOfBoundsException이 발생한다. 
+> 여섯 개 이상의 변수를 사용하는 구조 분해를 컬렉션에 대해 적용하면 컴파일 오류가 발생한다.
+
+
+
 <br/>
 
 
-## 7.4.
+## 7.4.1. 구조 분해 선언과 루프
+
+변수 선언이 들어갈 수 있는 장소라면 어디든 구조 분해 선언을 사용할 수 있다.
+맵의 원소에 대해 이터레이션할 때, 구조 분해 선언이 유용하다.
+
+```kotlin
+fun printEntries(map: Map<String, String>) {
+    for ((key, value) in map) { // 루프 변수에 구조 분해 선언 사용
+        println("$key -> $value")
+    }
+}
+
+>>> val map = mapOf("Oracle" to "Java", "JetBrains" to "Kotlin")
+>>> printEntries(map)
+Oracle -> Java
+JetBrains -> Kotlin
+```
+
+이 간단한 예제는 두 가지 코틀린 관례를 활용한다. 
+- 하나는 객체를 iteration하는 관례고, 
+- 다른 하나는 구조 분해 선언이다.
+
+코틀린 표준 라이브러리에는 맵에 대한 확장 함수로 iterator가 들어있다. 
+그 iterator는 맵 원소에 대한 이터레이터를 반환한다. 
+따라서 자바와 달리 코틀린에서는 맵을 직접 이터레이션할 수 있다. 
+
+또한 코틀린 라이브러리는 Map.Entry에 대한 확장 함수로 component1과 component2를 제공한다. 
+위의 루프는 이런 확장 함수를 사용하는 아래의 코드와 같다.
+
+```kotlin
+for(entry in map.entries) {
+    val key = entry.component1()
+    val value = entry.component2()
+    // ...
+}
+```
+
+<br/>
+<br/>
+
+
+## 7.5. 프로퍼티 접근자 로직 재활용 : 위임 프로퍼티
+
+코틀린이 제공하는 관례에 의존하는 특성 중에 독특하면서도 가장 강력한 기능인
+<span style="color:orange">위임 프로퍼티(delegated property)</span>다.
+
+백킹 필드에 단순히 값을 저장하는 것보다 더 복잡한 방식으로 동작하는 프로퍼티를 쉽게 구현 가능하다.
+그 과정에서 접근자 로직을 매번 재 구현할 필요도 없다.
+자신의 값을 필드가 아닌 데이터베이스 브라우저 세션 맵 등에 저장할 수 있다.
+
+<span style="color:orange">위임(delegated property)</span>이란
+객체가 직접 작업을 수행하지 않고 다른 도우미 객체가 그 작업을 처리하게 하는 디자인 패턴이다.
+이런 도우미 객체를 **위임객체**라 부른다.
+
 
 <br/>
 
 
-## 7.4.
+## 7.5.1. 위임 프로퍼티 소개
+
+```kotlin
+class Foo {
+    var p: Type by Delegate()
+}
+```
+위임 프로퍼티의 일반적인 문법이다.
+
+p 프로퍼티는 접근자 로직을 다른 객체에 위임하는데, 여기서 `Delegate` 클래스의 인스턴스를 위임 객체로 사용한다.
+`by` 뒤에 있는 식을 계산하여 위임에 쓰일 객체를 얻는다.
+프로퍼티 위임 객체가 따라야 하는 관례를 따르는 모든 객체를 위임에 사용할 수 있다.
+
+```kotlin
+class Foo {
+    // 컴파일러가 생성한 도우미 프로퍼티
+    private val delegate = Delegates()
+  
+    // p 프로퍼티를 위해 컴파일러가 생성한 접근자는 
+    // delegate의 getValue와 setValue 메소드를 호출
+    val p: Type
+    set(value: Type) = delegate.setValue(value)
+    get() = delegate.getValue(...)
+}
+```
+
+프로퍼티 위임 관례를 따르는 Delegate 클래스는 getValue()와 setValue()를 제공해야 된다.
+멤버 메서드나 확장 함수 두 형태 모두 가능하다.
+Delegate 클래스를 단순화하면 다음과 같다.
+
+```kotlin
+class Delegate {
+    // getValue는 게터를 구현하는 로직을 담는다
+    operator fun getValue(...) { ... }
+    // setValue는 세터를 구현하는 로직을 담는다
+    operator fun setValue(..., value: Type) { ... }
+}
+
+class Foo {
+    // by 키워드는 프로퍼티와 위임 객체를 연결한다
+    var p: Type by Delegate()
+}
+
+>>> val foo = Foo()
+// foo.p라는 프로퍼티 호출은 내부에서 delegate.getValue를 호출한다.
+>>> val oldValue = foo.p
+// 프로퍼티 값을 변경하는 문장은 내부에서 delegate.setValue를 호출한다
+>>> foo.p = new Value
+```
+
+foo.p는 일반 프로퍼티처럼 쓸 수 있고, 일반 프로퍼티 같아 보인다.
+하지만 실제로 p의 게터나 세터는 Delegate 타입의 위임프로퍼티 객체에 있는 메소드를 호출한다.
 
 <br/>
 
 
-## 7.4.
+## 7.5.2. 위임 프로퍼티 사용 : by lazy()를 사용한 프로퍼티 초기화 지연
+
+<br/>
+
+
+## 7.5.
+
+<br/>
+
+
+## 7.5.
+
+<br/>
+
+
+## 7.5.
 
 <br/>
 
