@@ -153,6 +153,9 @@ Point(x=4, y=6)
 val numbers = ArrayList<Int>()
 numbers += 42
 println(numbers[0])
+
+// 결과
+42
 ```
 
 반환 타입이 Unit인 plusAssign 함수를 정의하면 코틀린은 += 연산자에 그 함수를 사용한다. 
@@ -342,7 +345,7 @@ println(person1 < person2)
 false
 ```
 
-여기서 저의한 Person 객체의 Comparable 인터페이스를 코틀린뿐 아니라 자바 쪽의 컬렉션 정렬 메소드 등에도 사용할 수 있다.
+여기서 정의한 Person 객체의 Comparable 인터페이스를 코틀린뿐 아니라 자바 쪽의 컬렉션 정렬 메소드 등에도 사용할 수 있다.
 equals와 마찬가지로 Comparable의 compareTo에도 operator 변경자가 붙어있으므로 
 하위 클래스의 오버라이딩 함수에 operator를 붙일 필요가 없다.
 
@@ -357,6 +360,9 @@ equals와 마찬가지로 Comparable의 compareTo에도 operator 변경자가 �
 
 ```kotlin
 println("abc" > "def")
+
+// 결과
+true
 ```
 
 
@@ -1176,8 +1182,8 @@ class Person {
 이런 코드가 작동하는 이유는 표준 라이브러리가 Map과 MutableMap 인터페이스에 대해 
 getValue와 setValue 확장 함수를 제공하기 때문이다. 
 getValue에서 맵에 프로퍼티를 값을 저장할 때는 자동으로 프로퍼티 이름을 키로 활용한다. 
-여기서 p.name은 _attributes.getValue(p, prop)라는 호출을 대신하고, 
-_attributes.getValue(p, prop)는 다시 _attributes[prop.name]을 통해 구현된다.
+여기서 `p.name`은 `_attributes.getValue(p, prop)`라는 호출을 대신하고, 
+`_attributes.getValue(p, prop)`는 다시 `_attributes[prop.name]`을 통해 구현된다.
 
 
 <br/>
@@ -1203,10 +1209,10 @@ class User(id: EntityID) : Entity(id){ // 각 User 인스턴스는 테이블에 
 ```
 
 Users 객체는 데이터베이스 테이블이라 1개만 존재 해야되서 싱글턴으로 생성.
-User의 상위 클래스인 Entity클래스는 데이터베이스 칼럼을 엔티티의 속성 값으로 연결해주는 매핑이 있다.
+User의 상위 클래스인 Entity 클래스는 데이터베이스 칼럼을 엔티티의 속성 값으로 연결해주는 매핑이 있다.
 
 User 프로퍼티에 접근할때 자동으로 Entity 클래스에 정의된 데이터베이스 맵핑으로 필요한 값을 가져온다.
-Users.name (varchar)  User.age(integer)는 각각 위임 객체 관례에 따른 시그니처를 요구사항을 구현한다.
+Users.name(varchar), User.age(integer)는 각각 위임 객체 관례에 따른 시그니처를 요구사항을 구현한다.
 
 
 
