@@ -76,7 +76,7 @@ val action: () -> Unit = { println(42) }
 
 ```kotlin
 // 반환값이 널이 될 수 있는 경우
-var canReturnNull: (Int, Int) -> Int? = {x, y => null}
+var canReturnNull: (Int, Int) -> Int? = {x, y -> null}
 // 함수 자체가 널이 될 수 있는 경우
 var funOrNull: ((Int, Int) -> Int)? = null
 ```
@@ -114,13 +114,13 @@ funOrNull의 타입을 지정하면서 괄호를 빼먹으면 널이 될 수 있
 // 함수 타입인 파라미터를 선언한다
 fun twoAndThree(operation: (Int, Int)-> Int){
     // 함수타입인 파라미터를 호출한다
-    val result = oepration(2, 3)
+    val result = operation(2, 3)
     println("The result is $result")
 }
 
->>> twoAndThree(a, b -> a + b)
+>>> twoAndThree{ a, b -> a + b }
 The result is 5
->>> twoAndThree(a, b -> a * b)
+>>> twoAndThree{ a, b -> a * b }
 The result is 6
 ```
 
@@ -490,8 +490,8 @@ val averageMobileDuration = log
 함수 타입을 사용하면 필요한 조건을 파라미터로 뽑아낼 수 있다.
 
 ```kotlin
-fun List<SiteVisit>.averageDurationFor(predicate: <SiteVisit) -> Boolean) =
-        filter(predicate).map(SiteVisit::duration).average()
+fun List<SiteVisit>.averageDurationFor2(predicate: (SiteVisit) -> Boolean) =
+  filter(predicate).map(SiteVisit::duration).average()
         
 >>> println(log.averageDurationFor {
 ...    it.os in setOf(OS.ANDROID, OS.IOS) })
@@ -1064,21 +1064,7 @@ fun lookForAlice(people: List<Person>) {
 - 인라인 함수에서는 람다 안에 있는 return 문이 바깥쪽 함수를 반환시키는 **non-local return**을 사용할 수 있다.
 - 무명 함수는 람다 식을 대신할 수 있으며 return 식을 처리하는 규칙이 일반 람다 식과는 다르다. 
   - 본문 여러 곳에서 return 해야 하는 코드 블록을 만들어야 한다면 람다 대신 무명 함수를 쓸 수 있다.
-
-
-> ### ✅
-
-
-<span style="color:orange">xxxx</span>
-
-
-```mermaid
-graph TD
-      A-->B
-      A-->C
-      B-->D
-      C-->D
-```
+  
 
 <br/>
 <br/>
