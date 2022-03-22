@@ -1,5 +1,7 @@
 package ch8
 
+import java.util.concurrent.locks.Lock
+
 fun main() {
 
     println("\n\n===== 8.1.1 =====")
@@ -94,9 +96,58 @@ fun main() {
     })
     println(log.averageDurationFor2 { it.os == OS.IOS && it.path == "/signup" })
 
+
 }
 
+inline fun doSomethingElse(lambda: () -> Unit) {
+    println("Doing something else")
+    lambda()
+}
+
+// ===== 8.2.2 =====
+
+
+inline fun foo(inlined: () -> Unit, noinline notInlined: () -> Unit) {
+    // ...
+}
+
+
 // ===== 8.2.1 =====
+inline fun <T> synchronized(lock: Lock, action: () -> T): T {
+    lock.lock()
+    try {
+        return action()
+    } finally {
+        lock.unlock()
+    }
+}
+
+fun foo(l: Lock) {
+    println("Before sync")
+    synchronized(l) {
+        println("Action")
+    }  // 마지막 인자가 람다이므로 {} 안에 작성할 수 있다.
+    println("After sync")
+}
+
+class LockOwner(val lock: Lock) {
+    fun runUnderLock(body: () -> Unit) {
+        synchronized(lock, body) // 람다 대신에 함수 타입인 변수를 인자로 넘긴다
+    }
+}
+
+class LockOwner2(val lock: Lock) {
+    // 이 함수는 runUnderLock을 실제로 컴파일한 바이트코드와 비슷하다
+    fun __runUnderLock__(body: () -> Unit) {
+        lock.lock()
+        try {
+            // synchronized를 호출하는 부분에서 람다를 알 수 없으므로 본문(body())은 인라이닝되지 않는다
+            body()
+        } finally {
+            lock.unlock()
+        }
+    }
+}
 
 // ===== 8.1.6 =====
 data class SiteVisit(
