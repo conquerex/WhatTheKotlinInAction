@@ -2,11 +2,11 @@ package ch9
 
 fun main() {
 
-    println("\n\n===== 8.1.1 =====")
+    println("\n\n===== 9.1.1 =====")
 
 }
 
-// ===== 8.1.2 =====
+// ===== 9.1.1 =====
 fun String.filter(predicate: (Char) -> Boolean): String {
     val sb = StringBuilder()
     for (index in 0 until length) {
