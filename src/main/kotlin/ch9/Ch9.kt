@@ -4,6 +4,12 @@ fun main() {
 
     println("\n\n===== 9.1.1 =====")
 
+
+//    println(max("kotlin", 42))
+}
+
+fun <T: Comparable<T>> max(first: T, second: T): T {
+    return if (first > second) first else second
 }
 
 // ===== 9.1.1 =====
