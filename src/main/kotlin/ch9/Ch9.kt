@@ -6,6 +6,17 @@ fun main() {
 
 
 //    println(max("kotlin", 42))
+
+    println("\n\n===== 9.1.4 =====")
+//    val nullableStringProcessor = Processor<String?>()
+
+}
+
+// ===== 9.1.4 =====
+class Processor<T: Any> {
+    fun process(value: T) {
+        value.hashCode() // T 타입의 value는 null이 될 수 없다
+    }
 }
 
 fun <T: Comparable<T>> max(first: T, second: T): T {
