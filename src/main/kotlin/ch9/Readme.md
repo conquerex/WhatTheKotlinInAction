@@ -783,30 +783,32 @@ A가 B의 하위 타입이면 `List<A>`는 `List<B>`의 하위 타입이다.
 
 ## 9.3.3. 공변성: 하위 타입 관계를 유지
 
+`Producer<T>`를 예로 공변성 클래스를 설명하자. 
+A가 B의 하위 타입일 때 `Producer<A>`가 `Producer<B>`의 하위 타입이면 Peoducer는 공변적이다. 
+이를 하위 타입 관계가 유지된다고 말한다. 
+
+- 예를 들어 Cat가 Animal의 하위 타입이기 때문에 
+  - `Producer<Cat>`은 `Producer<Animal>`의 하위 타입이다.
+
+코틀린에서 제네릭 클래스가 타입 파라미터에 대해 공변적임을 표시하려면 
+타입 파라미터 이름 앞에 out을 넣어야 한다.
+
 ```kotlin
 interface Producer<out T> { // 클래스가 T에 대해 공변적이라 선언
     fun produce(): T
 }
 ```
 
-A가 B의 하위 타입일 때 `Producer<A>`가 `Producer<B>`의 하위 타입이면 Producer는 공변적이다.
-
-이를 하위 타입 관계가 유지된다 한다.
-
-코틀린에서 제네릭 클래스가 타입 파라미터에 대해 공변적임을 표시하려면 타입 파라미터 이름 앞에 out을 넣어야 한다.
-
-
-
-클래스의 타입 파라미터를 공변적으로 만들면 함수 정의에 사용한 파라미터 타입과 타입 인자의 타입이 정확히
-
-일치하지 않아도 그 클래스의 인스턴스를 함수 인자나 반환 값으로 사용할 수 있다.
+클래스의 타입 파라미터를 공변적으로 만들면 
+함수 정의에 사용한 파라미터 타입과 타입 인자의 타입이 정확히 일치하지 않아도 
+그 클래스의 인스턴스를 함수 인자나 반환 값으로 사용할 수 있다.
 
 ```kotlin
 open class Animal {
     fun feed() { ... }
 }
 
-class Herd<T: Animal> {
+class Herd<T: Animal> { // 이 타입 파라미터를 무공변성으로 지정
     val size: Int get() = ...
     operator fun get(i: Int): T { ... }
 }
@@ -818,30 +820,513 @@ fun feedAll(animals: Herd<Animal>) {
 }
 ```
 
+사용자 코드가 고양이 무리를 만들어서 관리한다면...
+
+```kotlin
+class Cat : Animal() { // Cat은 Animal이다
+    fun cleanLitter() { ... }
+}
+
+fun takeCareOfCats(cats: Herd<Cat>) {
+    for (i in 0 until cats.size) {
+        cats[i].cleanLitter()
+
+      /**
+       * ERROR: Type mismatch: inferred type is Herd<Cat>, but Herd<Animal> was expected
+       */
+      // feedAll(cats)
+    }
+}
+```
+
+feedAll 함수에게 고양이 무리를 넘기면 타입 불일치(type mismatch) 오류를 볼 수 있다. 
+Herd 클래스의 T 타입 파라미터에 대해 아무 변성도 지정하지 않았기 때문에 
+고양이 무리는 동물 무리의 하위 클래스가 아니다.
+
+Herd 클래스는 List와 비슷한 API를 제공하며 동물을 그 클래스에 추가하거나 
+무리안의 동물을 다른 동물로 바꿀 수는 없다. 
+따라서 Herd를 공변적인 클래스로 만들고 호출 코드를 적절히 바꿀 수 있다.
+
+```kotlin
+class Herd<out T : Animal> { // T는 이제 공변적  
+   // ...
+}
+
+fun takeCareOfCats(cats: Herd<Cat>) {
+    for (i in 0 until cats.size) {
+        cats[i].cleanLitter()
+    }
+    feedAll(cats) // 캐스팅을 할 필요가 없다
+}
+```
+
 모든 클래스를 공변적으로 만들 수는 없다.
-
-공변적으로 만들면 안전하지 못한 클래스도 있기 때문이다.
-
-타입 파라미터를 공변적으로 지정하면 클래스 내부에서 그 파라미터를 사용하는 방법을 제한한다.
+- 공변적으로 만들면
+  - 안전하지 못한 클래스도 있기 때문이다.
+- 타입 파라미터를 공변적으로 지정하면 
+  - 클래스 내부에서 그 파라미터를 사용하는 방법을 제한한다.
 
 타입 안정성을 보장하기 위해 공변적 파라미터는 항상 out 위치에만 있어야 한다.
+클래스 T 타입의 값을 생산할 수는 있지만 소비할 수는 없다.
 
--> 클래스 T 타입의 값을 생산할 수는 있지만 소비할 수는 없다.
+클래스 멤버를 선언할 때 타입 파라미터를 사용할 수 있는 지점은 모두 인(in)과 아웃(out)위치로 나뉜다.
+T라는 타입 파라미터를 선언하고 T를 사용하는 함수가 멤버로 있는 클래스를 생각해보자.
+- T가 함수의 반환 타입에 쓰이면 T는 out 위치에 있고, 
+  - 그 함수는 T 타입의 값을 생산한다.
+- T가 함수의 파라미터 타입에 쓰이면 in 위치에 있고, 
+  - 그 함수는 T 타입의 값을 소비한다.
 
-클래스 멤버를 선언 할 때 타입 파라미터를 사용할 수 있는 지점은 모두 in과 out으로 나뉜다.
+![그림 9.6](/Users/barley.son/dev/WhatTheKotlinInAction/src/main/kotlin/ch9/img9-6.png)
 
-T가 함수의 반환 타입에 쓰이면 T는 out 위치에 있고, 그 함수는 T 타입의 값을 생산한다.
+- 클래스 타입 파라미터 T 앞에 out 키워드를 붙이면 
+  - 클래스 안에서 T를 사용하는 메소드가 out 위치에서만 T를 사용하게 허용하고 
+  - in 위치에서는 사용하지 못하게 막는다.
 
-T가 함수의 파라미터 타입에 쓰이면 in 위치에 있고, 그 함수는 T 타입의 값을 소비한다.
+out 키워드는 T의 사용법을 제한하며 T로 인해 생기는 하위 타입 관계의 타입 안정성을 보장한다.
+
+```kotlin
+class Herd<out T: Animal> { 
+    val size: Int get() = ...
+    operator fun get(i: Int): T { ... } // T를 반환타입으로 사용한다
+} 
+```
+
+Cat이 Animal의 하위 타입이기 때문에 `Herd<Animal>`은 get을 호출하는 모든 코드는 
+get이 Cat을 반환해도 아무 문제 없이 작동한다.
+
+- 공변성: 하위 타입 관계가 유지된다(`Producer<Cat>`은 `Producer<Animal>`의 하위타입이다)
+- 사용 제한: T를 아웃 위치에서만 사용할 수 있다
+
+```kotlin
+interface List<out T>: Collection<T> {
+    // 읽기 전용 메소드로 T를 반환하는 메소드만 정의한다.
+    // (따라서 T는 항상 아웃 위치에 쓰인다.)
+    operator fun get(index: Int): T 
+    // ...
+}
+```
+
+타입 파라미터를...
+- 함수의 파라미터 타입이나
+- 반환 타입,
+- 그리고 다른 타입의 타입 인자로 사용할 수도 있다
+
+```kotlin
+interface List<out T>: Collection<T> {
+    // 여기서도 T는 아웃 위치에 있다
+    fun subList(fromIndex: Int, toIndex: Int): List<T> 
+    // ...
+}
+```
+
+`MutableList<T>`의 경우 타입파라미터 T에 대해 공변적으로 선언할 수 없다.
+`MutableList<T>`에는 T를 인자로 받아서 그 타입의 값을 반환하는 메소드가 있다.
+(따라서 T가 인과 아웃에 동시에 쓰인다.)
+
+```kotlin
+// MutableList는 T에 대해 공변적일 수 없다.
+interface MutableList<T> :List<T>, MutableCollection<T> {
+    // 이유는 T가 인 위치에 쓰이기 때문
+    @override fun add(element: T): Boolean
+}
+```
+
+컴파일러는 타입 파라미터가 쓰이는 위치를 제한한다. 클래스가 공변적으로 선언된 경우 
+`Type parametr T is declared as 'out' but occurs in 'in' position` 오류를 보고한다.
+(타입 파라미터 T가 아웃으로 선언됐지만 인 위치에 나타남)
+
+생성자 파라미터는 인이나 아웃, 어느 쪽도 아니라는 사실에 유의한다.
+타입 파라미터가 아웃이라 해도 그 타입을 여전히 생성자 파라미터 선언에 사용할 수 있다.
+
+```kotlin
+class Herd<out T: Animal>(vararg animals: T) { ... }
+```
+
+변성은 코드에서 위험할 여지가 있는 메소드를 호출할 수 없게 만듦으로써 
+제네릭타입의 인스턴스 역할을 하는 클래스 인스턴스를 잘못 사용하는 일이 없게 방지하는 역할을 한다. 
+생성자는 나중에 호출할 수 있는 메소드가 아니다. 따라서 생성자는 위험할 여지가 없다. 
+
+하지만 생성자에 val이나 var키워드를 적는다면 게터나 세터를 정의하는것과 같으므로 
+읽기 전용 프로퍼티는 아웃 위치, 변경 가능 프로퍼티는 아웃과 인위치 모두에 해당한다.
+
+또한 아래 예시는 loadAnimal 프로퍼티가 인위치에 있기 때문에 T를 아웃 위치에 표시할 수 없다.
+
+```kotlin
+class Herd<T: Animal>(var leadAnimal: T, vararg animals: T) { ... }
+```
+
+T 타입인 leadAnimal 프로퍼티가 in 위치에 있기 때문에 T를 out으로 표시할 수 없다.
+(필자 : 이게 무슨 말이야...)
+
+또한 이런 위치 규칙은 오직 외부에서 볼 수 있는 클래스 API에만 적용할 수 있다.
+비공개 메소드의 파라미터는 in도 아니고 out도 아닌 위치이다.
+변성 규칙은 클래스 외부의 사용자가 클래스를 잘못 사용하는 일을 막기 위한 것이므로 
+클래스 내부 구현에는 적용되지 않는다.
+
+<br/>
+
+## 9.3.4. 반공변성: 뒤집힌 하위 타입 관계
+
+반공변성은 공변성을 거울에 비친 상이라 할 수 있다.
+반공변 클래스의 하위 타입 관계는 공변 클래스의 경우와 반대이다.
+
+```kotlin
+interface Comparator<in T> {
+    fun compare(e1: T, e2: T): Int { ... } // T를 인 위치에 사용한다
+}
+```
+
+이 인터페이스의 메소드는 T 타입의 값을 소비하기만 한다. 
+이는 T가 in 위치에서만 쓰인다는 뜻이다.
+
+물론 특정 타입에 Comparator을 구현하면, 그 타입의 하위 타입에 속하는 모든 값을 비교할 수 있다.
+
+```kotlin
+val anyComparator = Comparator<Any> { 
+    e1, e2 -> e1.hashCode() - e2.hashCode()
+}
+
+val strings: listOf<String> = ...
+// 문자열과 같은 구체적인 타입을 비교하는데 모든 객체를 비교하는 Comparator을 사용할 수 있다.
+strings.sortedWith(anyComparator)
+```
+
+sortedWith는 `Comparator<String>`을 요구하므로,
+String보다 더 일반적인 타입을 비교할 수 있는 Comparator을 sortedWith에 넘겨주는 것은 안전하다
+어떤 타입의 객체를 Comparator로 비교해야 한다면
+그 타입이나 조상 타입을 비교할 수 있는 Comparator을 사용할 수 있다.
+이는 `Comparator<Any>`가 `Comparator<String>`이라는 뜻.
+하지만 Any는 String의 하위 타입이다. 
+서로 다른 타입 인자에 대해 Comparator의 타입 관계는 타입 인자의 하위 타입 관계와는 정반대 방향이다.
+
+Consumer<T>를 예로 들어보자.
+타입 B가 타입 A의 하위 타입인 경우 `Consumer<A>`가 `Consumer<B>`의 하위 타입인 관계가 성립하면 
+제네릭 클래스 Consumer<T>는 타입 인자 T에 반공변이다.
+A와 B의 위치가 서로 뒤바뀐다. **하위 타입 관계가 뒤집힌다.**
+
+![그림 9.7](/Users/barley.son/dev/WhatTheKotlinInAction/src/main/kotlin/ch9/img9-7.png)
+
+in 키워드는 그 키워드가 붙은 타입이 메소드 안으로 전달되어 소비된다는 뜻.
+공변성의 경우와 마찬가지로 타입 파라미터의 사용을 제한함으로써 특정 하위 타입관 관계에 도달할 수 있다.
+
+|공변성|반공변성|무공변성|
+|---|---|---
+|`Producer<out T>`|`Consumer<in T>`|`MutableList<T>`|
+|타입 인자의 하위 타입 관계가 제네릭 타입에서도 유지된다| 타입인자의 하위 타입 관계가 제네릭 타입에서 뒤집힌다|하위 타입 관계가 성립하지 않는다|
+|`Producer<Cat>`은 `Producer<Animal>`의 하위타입이다|`Consumer<Animal>`은 `Consumer<Cat>`의 하위타입이다||
+|T를 아웃 위치에서만 사용할 수 있다| T를 인위치에서만 사용할 수 있다|T를 아무위치에서나 사용할 수 있다|
+
+클래스나 인터페이스가 특정 타입 파라미터에 대해서는 
+공변적이고 다른 타입 파라미터에 대해서는 반공변적일 수도 있다.
+
+```kotlin
+interface Function1<in P, out R>{
+    operator fun invoke(p: P): R
+}
+```
+
+(P) -> R은 `Function<P, R>`을 더 알아보기 쉽게 적은 것이다.
+
+Function1의 하위 타입 관계는
+- 첫번째 타입 인자의 하위 타입관계와는 반대지만
+- 두번째 타입 인자의 하위 타입 관계와는 같음을 뜻한다.
+
+```kotlin
+fun enumerateCats(f: (Cat) -> Number){ ... }
+fun Animal.getIndex(): Int = ...
+
+// Animal은 Cat의 상위 타입이며 Int는 Number의 하위 타입이므로
+// 이 코드는 올바른 코틀린 식이다.
+>>> enumerateCats(Animal::birthDay)
+```
+
+클래스 정의에 변성을 직접 기술하면
+그 클래스를 사용하는 모든 장소에 그 변성이 적용된다는 점.
+자바는 이를 지원하지 않는다. 
+대신 클래스를 사용하는 위치에서 와일드 카드를 사용해 그때그때 변성을 지정해야 한다.
+
+
+<br/>
+
+
+## 9.3.5. 사용 지점 변성: 타입이 언급되는 지점에서 변성 지정
+
+클래스를 선언하면서 변성을 지정하면 
+그 클래스를 사용하는 모든 장소에 변성 지정자가 영향을 끼치므로 편리하다. 이러한 방식을 
+<span style="color:orange">선언 지점 변성(declaration site variance)</span>이라 한다.
+자바는 변성을 다른 방식으로 다루는데, 타입 파라미터가 있는 타입을 사용할 때마다 
+해당 타입 파라미터를 하위 타입이나 상위 타입 중 어떤 타입으로 대치할 수 있는지 명시해야 한다. 이런 방식을
+<span style="color:orange">사용 지점 변성(use site variance)</span>이라 한다.
+
+> ### ✅ 코틀린 선언 지점 변성과 자바 와일드카드 비교
+> 선언 지점 변성을 사용하면 변성 변경자를 단 한번만 표시하고
+> 클래스를 쓰는 쪽에서는 변성에 대해 신경쓸 필요가 없으므로 코드가 더 간결해진다.
+> 자바에서 사용자의 예상대로 작동하는 API를 만들기 위해 라이브러리 개발자는
+> `Function<? super T, ? extends R>`처럼 와일드카드를 사용해야 된다.
+> 자바 8 표준 라이브러리 소스코드를 살펴보면 
+> Function 인터페이스를 사용하는 모든 위치에서 와일드카드를 볼 수 있다.
+> 
+> ```java
+> public interface Stream {
+>   <R> Stream <R> map(Function<? super T, ? extends R> mapper);
+> }
+> ```
+> 클래스 선언 지점에서 변성을 한번만 지정하면 더 간결 + 우아한 코드를 작성할 수 있다
+
+
+코틀린도 사용 지점 변성을 지원한다.
+따라서 클래스 안에서 어떤 타입 파라미터가 공변적이거나 반공변적인지 선언할 수 없는 경우에도 
+특정 타입 파라미터가 나타나는 지점에서 변성을 정할 수 있다.
+
+MutableList와 같은 상당수의 인터페이스는 타입 파라미터로 지정된 타입을 소비하는 동시에 생산할 수 있기 때문에
+일반적으로 공변적이지도 반공변적이지도 않다.
+하지만 그런 인터페이스 타입의 변수가 한 함수 안에서 생산자나 소비자 중 
+단 한 가지 역할만을 담당하는 경우가 자주 있다.
+
+```kotlin
+fun <T> copyData(source: MutableList<T>, destination: MutableList<T>) {
+    for (item in source) {
+        destination.add(item)
+    }
+}
+```
+
+이 함수는 컬렉션의 원소를 다른 컬렉션으로 복사하는데, 
+두 컬렉션 모두 무공변 타입이지만 원본 컬렉션에서는 읽기만 하고 대상 컬렉션에서는 쓰기만 한다.
+따라서 두 컬렉션의 원소 타입이 정확히 일치할 필요가 없는 것이다.
+
+이 함수가 여러 다른 리스트 타입에 대해 작동하게 하려면 
+두 번째 제네릭 타입 파라미터를 도입할 수 있다.
+
+```kotlin
+// source 원소 타입은 destination 원소 타입의 하위 타입이어야 한다.
+fun <T: R, R> copyData(source: MutableList<T>, 
+                       destination: MutableList<R>) {
+    for (item in source) {
+        destination.add(item)
+    }
+}
+>>> val ints = mutableListOf(1, 2, 3)
+>>> val anyItems = mutableListOf<Any>()
+>>> copyData(ints, anyItems) // Int가 Any의 하위 타입이므로 이 함수를 호출할 수 있다.
+>>> println(anyItems)
+[1, 2, 3]
+```
+
+함수 구현이 아웃 위치에 있는 타입 파라미터를 사용하는 메소드만 호출한다면 
+그런 정보를 바탕으로 함수 정의 시 타입 파라미터에 변성 변경자를 추가할 수 있다.
+
+```kotlin
+// out 키워드를 타입을 사용하는 위치 앞에 붙이면
+// T 타입을 in 위치에 사용하는 메소드를 호출하지 않는다는 뜻이다.
+fun <T> copyData(source: MutableList<out T>,    
+                 destination: MutableList<T>) {
+    for (item in source) {
+        destination.add(item)
+    }
+}
+```
+
+타입 선언에서 타입 파라미터를 사용하는 위치라면 어디에나 변성 변경자를 붙일 수 있다.
+이때 <span style="color:orange">타입 프로젝션(tyoe projection)</span>이 일어난다.
+즉 source를 일반적인 MutableList가 아닌 MutableList를 프로젝션 한 타입으로 만든다.
+이 경우 copyData 함수는 MutalbeList의 메소드 중에서 반환 타입으로 
+타입 파라미터 T를 사용하는 메소드만 호출할 수 있다.
+컴파일러는 타입 파라미터 T를 함수 인자 타입으로 사용하지 못하게 만든다.
+
+```kotlin
+val list: MutableList<out Number> = ...
+list.add(42)
+
+Error: Out-projected type 'MutableList<out Number>' prohibits
+the use of 'fun add(element: E):Boolean'
+```
+
+프로젝션 타입의 메소드 중 일부를 호출하지 못할 때 
+그런 메소드를 호출하고 싶다면 프로젝션 타입 대신 일반 타입을 사용하면 된다.
+일반 타입을 사용하면 경우에 따라 다른 타입과 연관이 있는 새 타입 파라미터를 추가해야 할 수도 있다.
+
+copyData를 제대로 구현하려면 List<T>를 source 인자의 타입으로 정하는 것이다.
+실제 MutableList가 아니라 List에 있는 메소드만 source에 대해 사용하면 되고
+List의 타입 파라미터 공변성은 List 선언에 있다.
+
+List<out T>처럼 out 변경자가 지정된 타입 파라미터를 out 프로젝션하는 것은 의미 없다.
+코틀린 컴파일러는 이런 경우 불필요한 프로젝션이라는 경고를 한다.
+
+```kotlin
+// in 프로젝션 타입 파라미터를 사용하는 데이터 복사 함수
+fun <T> copyData(source: MutableList<T>,
+                 // 원본 리스트 원소 타입의 상위 타입을 대상 리스트 원소 타입으로 허용한다.
+                 destination: MutableList<in T>){
+    for (item in source){
+        destination.add(item)
+    }
+}
+```
+
+> 코틀린의 사용 지점 변성 선언은 자바의 한정 와일드카드와 똑같다.
+> - 코틀린
+>   - MutableList<out T>
+>   - MutableList<in T>
+> - 자바
+>   - MutableList<? extends T>
+>   - MutableList<? super T>
 
 <br/>
 
 
 
-## 9.3.
+## 9.3.6. 스타 프로젝션: 타입 인자 대신 * 사용
+
+제네릭 타입 인자 정보가 없음을 표현하기 위해 스타 프로젝션(star projection)을 사용한다.
+예를 들어 원소 타입이 알려지지 않은 리스트는 `List<*>`라는 구문으로 표현할 수 있다.
+
+첫째, 
+`MutableList<*>`는 `MutableList<Any?>`와 같지 않다.
+`MutableList<Any?>`는 모든 타입의 원소를 담을 수 있다는 사실을 알 수 있는 리스트다. 
+반면 `MutableList<*>`는 어떤 정해진 구체적인 타입의 원소만을 담는 리스트지만 
+그 원소의 타입을 정확히 모른다는 사실을 표현한다.
+타입이 정해지지 않았을 뿐이지 모든 타입을 담을수 있는 것이 아니고 
+원소의 타입은 Any?(최상위)의 하위 타입이란간 분명하다.
+
+
+```kotlin
+>>> val list: MutableList<Any?> = mutableListOf('a', 1, "qwe")
+>>> val chars = mutableListOf('a', 'b', 'c')
+>>> val unknownElements: MutableList<*> = // MutableList<*>는 MutableList<Any?>와 같지 않다.
+...         if (Random().nextBoolean()) list else chars
+>>> unknownElements.add(42) // 컴파일러는 이 메소드 호출을 금지한다.                              
+Error: Out-projected type 'MutableList<*>' prohibits
+the use of 'fun add(element: E): Boolean'
+>>> println(unknownElements.first()) // 원소를 가져와도 안전하다. first()는 Any? 타입의 원소를 반환한다. 
+a
+```
+
+MutableList<*>는 MutableList<Any?>처럼 동작한다. 
+어떤 리스트의 원소 타입을 모르더라도 그 리스트에서 안전하게 Any? 타입의 원소를 꺼내올 수는 있지만 
+타입을 모르는 리스트에 원소를 마음대로 넣을 수는 없다.
+
+> `Consumer<in T>`와 같은 반공변 타입 파라미터에 대한 스타 프로젝션은 `<in Nothing>`과 동등하다.
+> 결과적으로 그런 스타 프로젝션에서는 T가 시그니처에 들어가 있는 메소드를 호출할 수 없다.
+> 타입 파라미터가 반공변이라면 제네릭 클래스는 소비자 역할을 하는 데,
+> 우리는 그 클래스가 정확히 T의 어떤 부분을 사용할지 알 수 없다.
+> 따라서 반공변 클래스에 무언가를 소비하게 넘겨서는 안된다. (필자: 뭔말이여?)
+
+타입 파라미터를 시그니처에서 전혀 언급하지 않거나 데이터를 읽기는 하지만 
+그 타입에는 관심이 없는 경우와 같이 타입 인자 정보가 중요하지 않을 때도 스타 프로젝션 구문을 사용할 수 있다.
+
+
+```kotlin
+fun printFirst(list: List<*>) { // 모든 리스트를 인자로 받을 수 있다. 
+    if (list.isNotEmpty()) { // isNotEmpty()에서는 제네릭 타입 파라미터를 사용하지 않는다. 
+        println(list.first()) // first()는 이제 Any?를 반환하지만 여기서는 그 타입만으로 충분하다. 
+    }
+}
+>>> printFirst(listOf("Svetlana", "Dmitry"))
+Svetlana
+```
+
+사용 지점 변성과 마찬가지로 이런 스타 프로젝션도 우회하는 방법이 있는데, 
+제네릭 타입 파라미터를 도입하면 된다.
+
+```kotlin
+fun <T> printFirst(list: List<T>) { // 이 경우에도 모든 리스트를 인자로 받을 수 있다
+    if(list.isNotEmpty()) {
+        println(list.first()) // 이제 first는 T 타입의 값을 반환한다.
+    } 
+}
+```
+
+스타 프로젝션을 쓰는 쪽에 더 간결하지만 
+제네릭 타입 파라미터가 어떤 타입인지 굳이 알 필요가 없을 때만 스타 프로젝션을 사용할 수 있다.
+스타 프로젝션을 사용할 때는 값을 만들어내는 메소드만 호출할 수 있고 그 값의 타입에는 신경을 쓰지 말아야 한다.
+
+스타 프로젝션을 쓰는 방법과 함정을 보여주는 예제를 살펴보자. 
+FiledValidator에는 인 위치에만 쓰이는 타입 파라미터가 있다. 따라서 FiledValidator는 반공변성이다.
+실제로 String 타입의 필드를 검증하기 위해 Any 타입을 검증하는 FiledValidator를 사용할 수 있다.
+
+```kotlin
+interface FiledValidator<in T>{ // T에 대해 반공변인 인터페이스를 선언
+    fun validator(input: T): Boolean // T를 인 위치에만 사용한다.(이 메소드는 T 타입의 값을 소비)
+}
+
+object DefaultStringValidator: FiledValidator<String>{
+    override fun validator(input: String): Boolean  = input.isNotEmpty()
+}
+
+object DefaultIntValidator: FiledValidator<Int>{
+    override fun validator(input: Int): Boolean = input >= 0
+}
+```
+
+모든 검증기를 한 컨테이너에 넣고 입력 필드의 타입에 따라 적절한 검증기를 꺼내서 사용하는 경우를 생각해보자.
+모든 타입의 검증기를 맵에 넣을 수 있어야 하므로 KClass를 키로 하고
+`FiledValidator<*>`를 값으로 하는 맵을 선언한다.
+
+```kotlin
+val validators = mutableMapOf<KClass<*>, FiledValidator<*>>()
+validators[String::class] = DefaultStringValidator
+validators[Int::class] =  DefaultIntValidator   
+```
+
+문제가 생긴다. String 타입의 필드를 `FiledValidator<*>` 타입의 검증기로 검증할 수 없다.
+컴파일러는 `FiledValidator<*>`가 어떤 타입을 검증하는 검증기인지 모르기 때문에
+String을 검증하기 위해 그 검증기를 사용하면 안전하지 않다고 판단한다.
+
+```kotlin
+// Warning: unchecked cast (경고: 안전하지 않은 캐스팅)
+val stringValidator = validators[String::class] as FiledValidator<String>
+println(stringValidator.validate(""))
+```
+
+컴파일러는 타입 캐스팅이 안전하지 못하다고 경고한다.
+또한 타입 캐스팅 부분에서 실패하지 않고 값을 검증하는 메소드 안에서 실패한다.
+실행시점에 모든 제네릭 타입 정보는 사라지므로
+타입 캐스팅은 문제가 없고 검증 메소드 안에서 값의 메소드나 프로퍼티를 사용할 때 문제가 생긴다. 
+
+```kotlin
+// Warning: unchecked cast (경고: 안전하지 않은 캐스팅)
+val stringValidator = validators[String::class] as FiledValidator<String>
+println(stringValidator.validate(""))
+```
+
+
+```kotlin
+val validators = mutableMapOf<KClass<*>, FiledValidator<*>>()
+
+validators[String::class] = DefaultStringValidator
+validators[Int::class] =  DefaultIntValidator
+
+val stringValidator = validators[Int::class] as FiledValidator<String>
+println(stringValidator.validator(""))
+```
+
 
 
 <br/>
+<br/>
+<br/>
+
+
+
+## 9.4. 요약
+
+- 코틀린 제네릭스는 자바와 아주 비슷하다. 제네릭 함수와 클래스를 자바와 비슷하게 선언할 수 있다.
+- 자바와 마찬가지로 제네릭 타입의 타입 인자는 컴파일 시점에만 존재한다.
+- 타입 인자가 실행 시점에 지워지므로 타입 인자가 있는 타입(제네릭 타입)을 is 연산자를 사용해 검사할 수 없다.
+- 인라인 함수의 타입 매개변수를 refied로 표시해서 실체화하면 실행 시점에 그 타입을 is로 검사하거나 java.lang.Class 인스턴스를 얻을 수 있다.
+- 변성은 기저 클래스가 같고 타입 파라미터가 다른 두 제네릭 타입 사이의 상위/하위 타입 관계가 타입 인자 사이의 상위/하위 타입 관계에 의해 어떤 영향을 받는지를 명시하는 방법이다.
+- 제네릭 클래스의 타입 파라미터가 아웃 위치에서만 사용되는 경우(생산자) 그 타입 파라미터를 out으로 표시해서 공변적으로 만들 수 있다.
+- 공변적인 경우와 반대로 제네릭 클래스의 타입 파라미터가 인 위치에서만 사용되는 경우(소비자) 그 타입 파라미터를 in으로 표시해서 반공변적으로 만들 수 있다.
+- 코틀린의 읽기 전용 List 인터페이스는 공변적이다. 따라서 List<String>은 List<Any)의 하위 타입이다..
+- 함수 인터페이스는 첫 번째 타입 파라미터에 대해서는 반공변적이고, 두 번째 타입 파라미터에 대해서는 공변적이다. 그래서 (Animal) → Int는 (Cat) → Number의 하위 타입이다.
+- 코틀린에서는 제네릭 클래스의 공변성을 전체적으로 지정하거나(선언 지점 변성) 구체적인 사용 위치에서 지정할 수 있다. (사용 지점 변성)
+- 제네릭 클래스의 타입 인자가 어떤 타입인지 정보가 없거나 타입 인자가 어떤 타입인지가 중요하지 않을 때 스타 프로젝션 구문을 사용할 수 있다.
+
+
+<br/>
+
+
 
 
 
