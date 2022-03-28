@@ -647,28 +647,192 @@ inline fun <reified T> loadService() { // 타입 파라미터를 reified로 표�
 
 ## 9.3. 변성: 제네릭과 하위 타입
 
+<span style="color:orange">변성(variance)</span> 개념은 List<String>와 List<Any>와 같이 기저 타입이 같고 
+타입 인자가 다른 여러 타입이 서로 어떤 관계가 있는지 설명하는 개념이다. 
+변성을 잘 활용하면 사용에 불편하지 않으면서 타입 안전성을 보장하는 API를 만들 수 있다.
+
+<br/>
+
+## 9.3.1. 변성이 있는 이유: 인자를 함수에 넘기기
+
+List 타입의 파라미터를 받는 함수에 List을 넘기면 안전할까?
+
+String 클래스는 Any를 확장하므로 Any 타입 값을 파라미터로 받는 함수에 String 값을 넘겨도 절대 안전하다.
+하지만 Any와 String이 List 인터페이스의 타입 인자로 들어가는 경우에는 절대 안전하다고 말할 수 없다.
+
+리스트의 내용을 출력하는 함수를 보자.
+
+```kotlin
+fun printContents(list: List<Any>) {
+    println(list.joinToString())
+}
+
+>>> printContents(listOf("abc", "bac"))
+abc, bac
+```
+
+위 경우 문자열 리스트도 잘 동작한다. 각 원소를 Any로 취급하며, 모든 문자열은 Any 타입이기 때문이다.
+
+```kotlin
+fun addAnswer(list:MutableList<Any>) {
+    list.add(42)
+}
+
+>>> val strings = mutableListOf("abc", "bac")
+>>> addAnswer(strings) // 이 줄이 컴파일 되면
+>>> println(strings.maxBy { it.length}) // 실행시점에 예외가 발생할 것이다
+ClassCastException: Integer cannot be cast to String
+```
+
+MutableList<String> 타입의 strings 변수를 선언해 함수에 넘길 때, 
+컴파일러가 이 식을 받아들이면 정수를 문자열 리스트 뒤에 추가할 수 있다.
+따라서 이 함수 호출은 컴파일될 수 없다.
+MutableList<Any>가 필요한 곳에 MutableList<String>을 넘기면 안된다는 사실을 보여준다.
+
+
+이제 List<Any> 타입의 파라미터를 받는 함수에 List<String>을 넘기면 안전한 지에 대해 보자.
+어떤 함수가 리스트의 원소를 추가하거나 변경하면 타입 불일치가 생길 수 있어 
+List<Any> 대신 List<String>을 넘길 수 없다.
+하지만 원소 추가나 변경이 없다면 대신 넘겨도 안전하다.
+
+- 코틀린에서는 리스트의 변경 가능성에 따라 적절한 인터페이스를 선택하면 
+  - 안전하지 못한 함수 호출을 막을 수 있다.
+- 함수가 읽기 전용 리스트를 받는다면 
+  - 더 구체적인 타입의 원소를 갖는 리스트를 그 함수에 넘길 수 있지만, 
+- 리스트가 변경 가능하다면 
+  - 그럴 수 없다.
+
+
+<br/>
+
+## 9.3.2. 클래스, 타입, 하위타입
+
+제네릭 클래스가 아닌 클래스에서는 클래스 이름을 바로 타입으로 쓸 수 있다.
+
+- 예) `var x: String`이라고 쓰면 
+  - String 클래스의 인스턴스를 저장하는 변수를 정의할 수 있고, 
+  - `var x: String?`처럼 같은 클래스 이름을 널이 될 수 있는 타입에도 쓸 수 있다.
+
+제네릭 클래스에서는 상황이 더 복잡하다.
+올바른 타입을 얻으려면 **제네릭 타입의 타입 파라미터를 구체적인 타입 인자로 바꿔줘야** 한다.
+List는 타입이 아니다. 하지만 클래스다. 
+하지만 타입 인자를 치환한 List<Int>, List<String?>, List<List<String>> 등은 
+모두 제대로 된 타입이다.
+각각의 제네릭 클래스는 무수히 많은 타입을 만들 수 있다.
+
+타입 사이의 관계를 논하기 위해서는 
+<span style="color:orange">하위 타입</span>이라는 개념을 잘 알아야 한다.
+어떤 타입 A의 값이 필요한 모든 장소에 어떤 타입 B의 값을 넣어도 아무 문제가 없다면 타입 B는 A의 하위 타입이다.
+
+- ex) Int는 Number의 하위 타입이지만 String의 하위 타입은 아니다.
+
+<span style="color:orange">상위 타입</span>은 하위 타입의 반대로 
+A 타입이 B 타입의 하위 타입이라면 B는 A의 상위 타입이다.
+
+```mermaid
+graph BT
+      x["상위 타입"] --"✅"--> y["하위 타입"]
+      A["B"] --"✅"--> B["A"]
+      C["Int"]--"✅"-->D["Number"]
+      e["Int"] --"✅"--> f["Int"]
+      g["Int"] --"❌"--> h["String"]
+```
+
+- A가 필요한 모든 곳에 B를 사용할 수 있으면 B는 A의 하위 타입이다.
+
+컴파일러는 변수 대입이나 함수 인자 전달 시 하위 타입 검사를 매번 수행한다.
+
+```kotlin
+fun test(i: Int) {
+    val n: Number = i  // Int는 Number의 하위 타입이므로 컴파일된다.
+    
+    fun f(s: String) { /*. . .*/ }
+    f(i) // Int가 String의 하위 타입이 아니므로 컴파일되지 않는다.
+}
+```
+
+어떤 값의 타입이 변수 타입의 하위 타입인 경우에만 값을 변수에 대입하게 허용한다.
+
+간단한 경우 하위 타입은 <span style="color:orange">하위 클래스</span>와 근본적으로 같다.
+Int 클래스는 Number의 하위 클래스이므로 Int는 Number의 하위 타입이다.
+String은 CharSequence의 하위 타입인 것처럼 어떤 인터페이스를 구현하는 클래스의 타입은 
+그 인터페이스 타입의 하위 타입이다.
+
+널이 될 수 있는 타입은 하위 타입과 하위 클래스가 같지 않다.
+
+![그림 9.5](/Users/barley.son/dev/WhatTheKotlinInAction/src/main/kotlin/ch9/img9-5.png)
+
+널이 될 수 없는 타입은 널이 될 수 있는 타입의 하위 타입이지만 두 타입 모두 같은 클래스에 해당한다.
+항상 널이 될 수 없는 타입의 값을 널이 될 수 있는 타입의 변수에 저장할 수 있지만, 
+반대로 널이 될 수 있는 타입의 값을 널이 될 수 없는 타입의 변수에 저장할 수는 없다.
+
+제네릭 타입을 인스턴스화할 때 타입 인자로 서로 다른 타입이 들어가면 
+인스턴스 타입 사이의 하위 타입 관계가 성립하지 않으면 
+그 제네릭 타입을 <span style="color:orange">무공변(invariant)</span>이라 말한다.
+
+MutableList를 예로 들어보자.
+A와 B가 서로 다르기만 하면 `MutableList<A>`는 항상 `MutableList<B>`의 하위 타입이 아니다.
+
+코틀린의 List 인터페이스는 읽기 전용 컬렉션을 표현한다. 
+A가 B의 하위 타입이면 `List<A>`는 `List<B>`의 하위 타입이다. 
+그런 클래스나 인터페이스를 공변적(covariant)이라고 한다.
 
 
 <br/>
 
 
+## 9.3.3. 공변성: 하위 타입 관계를 유지
 
-## 9.3.1. 
+```kotlin
+interface Producer<out T> { // 클래스가 T에 대해 공변적이라 선언
+    fun produce(): T
+}
+```
+
+A가 B의 하위 타입일 때 `Producer<A>`가 `Producer<B>`의 하위 타입이면 Producer는 공변적이다.
+
+이를 하위 타입 관계가 유지된다 한다.
+
+코틀린에서 제네릭 클래스가 타입 파라미터에 대해 공변적임을 표시하려면 타입 파라미터 이름 앞에 out을 넣어야 한다.
 
 
-<br/>
 
+클래스의 타입 파라미터를 공변적으로 만들면 함수 정의에 사용한 파라미터 타입과 타입 인자의 타입이 정확히
 
+일치하지 않아도 그 클래스의 인스턴스를 함수 인자나 반환 값으로 사용할 수 있다.
 
-## 9.3.
+```kotlin
+open class Animal {
+    fun feed() { ... }
+}
 
+class Herd<T: Animal> {
+    val size: Int get() = ...
+    operator fun get(i: Int): T { ... }
+}
 
-<br/>
+fun feedAll(animals: Herd<Animal>) {
+    for(i in 0 until animals.size) {
+        animals[i].feed()
+    }
+}
+```
 
+모든 클래스를 공변적으로 만들 수는 없다.
 
+공변적으로 만들면 안전하지 못한 클래스도 있기 때문이다.
 
-## 9.3.
+타입 파라미터를 공변적으로 지정하면 클래스 내부에서 그 파라미터를 사용하는 방법을 제한한다.
 
+타입 안정성을 보장하기 위해 공변적 파라미터는 항상 out 위치에만 있어야 한다.
+
+-> 클래스 T 타입의 값을 생산할 수는 있지만 소비할 수는 없다.
+
+클래스 멤버를 선언 할 때 타입 파라미터를 사용할 수 있는 지점은 모두 in과 out으로 나뉜다.
+
+T가 함수의 반환 타입에 쓰이면 T는 out 위치에 있고, 그 함수는 T 타입의 값을 생산한다.
+
+T가 함수의 파라미터 타입에 쓰이면 in 위치에 있고, 그 함수는 T 타입의 값을 소비한다.
 
 <br/>
 
